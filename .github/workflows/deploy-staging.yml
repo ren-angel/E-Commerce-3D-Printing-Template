@@ -1,0 +1,96 @@
+# name of the workflow shown in Actions UI
+name: CI/CD — Build & Push Backend+Frontend (staging)
+
+# events that trigger the workflow
+on: 
+  # trigger when commits are pushed to these branches
+  push:
+    branches:
+      - staging
+      - back-end
+      - front-end
+      
+
+# permissions the workflow needs (scoped)
+permissions:
+  contents: read    # allow reading repo contents
+  packages: write   # allow pushing container packages to GHCR
+  id-token: write   # required by some auth flows (kept minimal)
+
+jobs:
+  # single job that builds and pushes images
+  build-and-push:
+    # descriptive name for the job
+    name: Build & Push Images
+    # runner to execute job on
+    runs-on: ubuntu-latest
+
+    steps:
+      # checkout repository code so actions can access it
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # set up QEMU to support multi-arch builds if needed
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      # log into GHCR so we can push images; uses repo token
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}            # current GitHub actor (workflow runner)
+          password: ${{ secrets.GITHUB_TOKEN }}    # token with packages: write permission
+
+      # build and push backend image (tagged by commit and 'staging-latest')
+      - name: Build & Push Backend image
+        if: github.ref == 'refs/heads/back-end'       # run only if pushed to back-end branch
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend                          # path to backend Docker context
+          file: ./backend/Dockerfile                  # Dockerfile path for backend
+          push: true                                  # push image after building
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/backend:staging-${{ github.sha }}   # unique tag per commit
+            ghcr.io/${{ github.repository_owner }}/backend:staging-latest              # latest staging tag
+          cache-from: type=gha                        # use GitHub Actions cache as build cache source
+          cache-to: type=gha,mode=max                 # store cache to GitHub Actions cache
+
+      # build and push frontend image (tagged similarly)
+      - name: Build & Push Frontend image
+        if: github.ref == 'refs/heads/front-end'       # run only if pushed to front-end branch
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend                         # path to frontend Docker context
+          file: ./frontend/Dockerfile                 # Dockerfile path for frontend
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/frontend:staging-${{ github.sha }}  # commit-tagged frontend
+            ghcr.io/${{ github.repository_owner }}/frontend:staging-latest             # latest staging frontend
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # optional: store the image names+tags as outputs for other jobs (useful if you expand)
+      #- name: Set output image names
+       # run: |
+        #  echo "BACKEND_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER}/backend:staging-${GITHUB_SHA}" >> $GITHUB_ENV
+         # echo "FRONTEND_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER}/frontend:staging-${GITHUB_SHA}" >> $GITHUB_ENV
+        #env:
+         # GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+          #GITHUB_SHA: ${{ github.sha }}
+
+      # tell Render to redeploy backend service
+      - name: Trigger Render Backend Deploy
+        # Send a POST request to the Render backend deployment webhook to trigger a redeployment
+        # If the request fails, the workflow will fail due to the '--fail' flag
+        run: |
+          curl -X POST "${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}" \
+            --fail
+
+      # tell Render to redeploy frontend service
+      - name: Trigger Render Frontend Deploy
+        # Send a POST request to the Render frontend deployment webhook to trigger a redeployment
+        # If the request fails, the workflow will fail due to the '--fail' flag
+        # run: |
+          # curl -X POST "${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}" \
+            # --fail
