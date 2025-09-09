@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  
+  # Frontend service
+  #frontend:
+    # Configuration to build the frontend from the context (directory) ./front-end
+    #build:
+      #context: ./Front-end
+      # Define the arguments to be used in the build process of the app
+      #args:
+        #- REACT_APP_API_URL
+    # Creates the image using the container registry login that will be used as a repository in Azure
+    # image: ghcr.io/ren-angel/frontend:staging-latest
+    # Fetches credentials for the registry
+    # environment:
+    #   - REGISTRY_USERNAME=${REGISTRY_USERNAME}
+    #   - REGISTRY_PASSWORD=${REGISTRY_PASSWORD}
+    # Port mapping for external access, host port 3000 to container port 80
+    #ports:
+      #- "80:80"
+    # Backend service dependency, frontend will only start after the backend is available
+    #depends_on:
+      #- backend
+    # References the environment variable file specific to the frontend
+    #env_file:
+      #- ./Front-end/.env
+
+  # Backend service
+  backend:
+    # Configuration to build the backend from the context (directory) ./back-end
+    build:
+      context: ./Back-end
+    # Creates the image using the Github Actions Container Registry
+    image: ghcr.io/ren-angel/backend:staging-latest
+    # Fetches credentials for the registry
+    environment:
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+    # References the environment variable file for the app
+    env_file:
+      - ./Back-end/.env
+    # Port mapping for external access, host port 5000 to container port 5000
+    ports:
+      - "5000:5000"
+    # Database service dependency, backend will only start if the database is healthy
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Database service
+  db:
+    # Uses the official MySQL 8.0 image from Docker Hub
+    image: mysql:8.0
+    # Defines environment variables for the MySQL root password and the database name
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+    # Volume to persist MySQL data between container restarts and across deployments
+    volumes:
+      - db-data:/var/lib/mysql
+      # Optionally, custom SQL scripts can be mounted for database initialization
+      # - ./Back-end/src/models/:/docker-entrypoint-initdb.d/
+    # Healthcheck to ensure MySQL is healthy by checking if it responds to a ping
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+volumes:
+  # Persistent volume for MySQL database data
+  # Ensures data is not lost when the container is stopped or removed
+  db-data:
