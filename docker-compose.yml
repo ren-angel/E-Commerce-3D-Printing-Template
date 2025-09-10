@@ -12,10 +12,6 @@ services:
         #- REACT_APP_API_URL
     # Creates the image using the container registry login that will be used as a repository in Azure
     # image: ghcr.io/ren-angel/frontend:staging-latest
-    # Fetches credentials for the registry
-    # environment:
-    #   - REGISTRY_USERNAME=${REGISTRY_USERNAME}
-    #   - REGISTRY_PASSWORD=${REGISTRY_PASSWORD}
     # Port mapping for external access, host port 3000 to container port 80
     #ports:
       #- "80:80"
