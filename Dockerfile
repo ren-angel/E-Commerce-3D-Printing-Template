@@ -6,10 +6,10 @@
 FROM node:18-alpine AS builder
 
 # Set the working directory inside the container
-WORKDIR /app
+WORKDIR /backend
 
-# Copy package.json and package-lock.json (if present) into the container
-COPY package*.json ./
+# Copy package.json into the container
+COPY package.json /backend/
 
 # Install all dependencies using a clean install for consistency and speed
 RUN npm ci
@@ -28,14 +28,14 @@ RUN npm run build
 FROM node:18-alpine
 
 # Set the working directory inside the runtime container
-WORKDIR /app
+WORKDIR /backend
 
 # Set the environment variable to production to optimize performance
 # ENV NODE_ENV=production
 
-# Copy only the built output and package.json files from the build stage
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/package*.json ./
+# Copy only the built output and package.json file from the build stage
+COPY --from=builder /backend/dist ./dist
+COPY --from=builder /backend/package.json ./
 
 # Install only production dependencies (devDependencies are skipped)
 RUN npm ci --only=production
