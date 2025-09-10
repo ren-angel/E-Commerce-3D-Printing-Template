@@ -3,7 +3,7 @@
 # ------------------------
 
 # Official Node.js 18 Alpine image for the build stage
-FROM node:18-alpine AS builder
+FROM node:22-alpine AS builder
 
 # Set the working directory inside the container
 WORKDIR /backend
@@ -25,7 +25,7 @@ RUN npm run build
 # ------------------------
 
 # Use a fresh Node.js 18 Alpine image for the final runtime container (smaller and cleaner)
-FROM node:18-alpine
+FROM node:22-alpine
 
 # Set the working directory inside the runtime container
 WORKDIR /backend
