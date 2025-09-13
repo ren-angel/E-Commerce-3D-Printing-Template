@@ -52,8 +52,8 @@ jobs:
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/back-end'       # run only if pushed to back-end branch
         uses: docker/build-push-action@v5
         with:
-          context: ./backend                          # path to backend Docker context
-          file: ./backend/Dockerfile                  # Dockerfile path for backend
+          context: ./back-end                          # path to backend Docker context
+          file: ./back-end/Dockerfile                  # Dockerfile path for backend
           push: true                                  # push image after building
           # tagging image with an unique tag per commit and latest staging tag, respectively
           tags: |
@@ -67,8 +67,8 @@ jobs:
         # if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/front-end'       # run only if pushed to front-end branch
         # uses: docker/build-push-action@v5
         # with:
-          # context: ./frontend                         # path to frontend Docker context
-          # file: ./frontend/Dockerfile                 # Dockerfile path for frontend
+          # context: ./front-end                         # path to frontend Docker context
+          # file: ./front-end/Dockerfile                 # Dockerfile path for frontend
           # push: true
           # tags: |
             # ghcr.io/${{ github.repository_owner }}/frontend:staging-${{ github.sha }}
