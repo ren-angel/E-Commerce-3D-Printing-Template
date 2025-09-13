@@ -45,7 +45,7 @@ jobs:
 
       # build and push backend image (tagged by commit and 'staging-latest')
       - name: Build & Push Backend image
-        if: github.ref == 'refs/heads/back-end'       # run only if pushed to back-end branch
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/back-end'       # run only if pushed to back-end branch
         uses: docker/build-push-action@v5
         with:
           context: ./backend                          # path to backend Docker context
@@ -59,7 +59,7 @@ jobs:
 
       # build and push frontend image (tagged similarly)
       # - name: Build & Push Frontend image
-        # if: github.ref == 'refs/heads/front-end'       # run only if pushed to front-end branch
+        # if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/front-end'       # run only if pushed to front-end branch
         # uses: docker/build-push-action@v5
         # with:
           # context: ./frontend                         # path to frontend Docker context
