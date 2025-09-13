@@ -55,9 +55,10 @@ jobs:
           context: ./backend                          # path to backend Docker context
           file: ./backend/Dockerfile                  # Dockerfile path for backend
           push: true                                  # push image after building
+          # tagging image with an unique tag per commit and latest staging tag, respectively
           tags: |
-            ghcr.io/${{ github.repository_owner }}/backend:staging-${{ github.sha }}   # unique tag per commit
-            ghcr.io/${{ github.repository_owner }}/backend:staging-latest              # latest staging tag
+            ghcr.io/${{ github.repository_owner }}/backend:staging-${{ github.sha }}   
+            ghcr.io/${{ github.repository_owner }}/backend:staging-latest     
           cache-from: type=gha                        # use GitHub Actions cache as build cache source
           cache-to: type=gha,mode=max                 # store cache to GitHub Actions cache
 
@@ -70,8 +71,8 @@ jobs:
           # file: ./frontend/Dockerfile                 # Dockerfile path for frontend
           # push: true
           # tags: |
-            # ghcr.io/${{ github.repository_owner }}/frontend:staging-${{ github.sha }}  # commit-tagged frontend
-            # ghcr.io/${{ github.repository_owner }}/frontend:staging-latest             # latest staging frontend
+            # ghcr.io/${{ github.repository_owner }}/frontend:staging-${{ github.sha }}
+            # ghcr.io/${{ github.repository_owner }}/frontend:staging-latest             
           # cache-from: type=gha
           # cache-to: type=gha,mode=max
 
