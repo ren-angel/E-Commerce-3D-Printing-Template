@@ -9,6 +9,7 @@ on:
       - staging
       - back-end
       - front-end
+  workflow_dispatch:
       
 
 # permissions the workflow needs (scoped)
