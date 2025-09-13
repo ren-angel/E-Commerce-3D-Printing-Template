@@ -3,13 +3,8 @@ name: CI/CD — Build & Push Backend+Frontend (staging)
 
 # events that trigger the workflow
 on: 
-  # trigger when commits are pushed to these branches
-  push:
-    branches:
-      - staging
-      - back-end
-      - front-end
-  workflow_dispatch:
+  # trigger when commits are pushed or manually
+  [push, workflow_dispatch]
       
 
 # permissions the workflow needs (scoped)
