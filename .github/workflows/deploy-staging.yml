@@ -56,7 +56,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .                                  # path to backend Docker context, which is the current branch
-          file: ./back-end/Dockerfile                 # Dockerfile path for backend
+          file: ./Dockerfile                 # Dockerfile path for backend
           push: true                                  # push image after building
           # tagging image with an unique tag per commit and latest staging tag, respectively
           tags: |
@@ -77,7 +77,7 @@ jobs:
         # uses: docker/build-push-action@v5
         # with:
           # context: .                                  # path to frontend Docker context, which is the current branch
-          # file: ./front-end/Dockerfile                 # Dockerfile path for frontend
+          # file: ./Dockerfile                 # Dockerfile path for frontend
           # push: true
           # tags: |
             # ghcr.io/${{ github.repository_owner }}/frontend:staging-${{ github.sha }}
