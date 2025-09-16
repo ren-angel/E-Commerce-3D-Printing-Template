@@ -10,7 +10,7 @@ async function bootstrap() {
 
   app.use(helmet()); // Helmet helps secure your app by setting various HTTP headers
   app.use(compression()); // Compression middleware to reduce the size of the response body and improve the speed of web applications
-  app.use(morgan('combined')); // morgan logging for HTTP requests using 'combined' format for detailed logs
+  app.use(morgan('dev')); // morgan logging for HTTP requests during development using the 'dev' format for concise logs
   
   // Enabling CORS for only the front-end origin and specific HTTP methods
   app.enableCors({
