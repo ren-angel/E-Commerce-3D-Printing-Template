@@ -41,8 +41,14 @@ services:
       - "5000:5000"
     # Database service dependency, backend will only start if the database is healthy
     depends_on:
+      - redis
       db:
         condition: service_healthy
+        
+  redis:
+    image: redis:8.2
+    ports:
+      - "6379:6379"
 
   # Database service
   db:
