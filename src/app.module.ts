@@ -5,7 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
-// import { CacheModule } from '@nestjs/cache-manager';
+import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-ioredis';
 import { BullModule } from '@nestjs/bullmq';
 // import { ProductModule } from './infrastructure/http/modules/product.module';
@@ -32,6 +32,7 @@ import { BullModule } from '@nestjs/bullmq';
     // Configures assincronous database connection of mySQL type and loads variables from .env file 
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
+      inject: [ConfigService],
       useFactory: async (configService: ConfigService) => ({
         type: 'mysql',
         host: configService.get<string>('DB_HOST'),
@@ -42,7 +43,6 @@ import { BullModule } from '@nestjs/bullmq';
         // entities: [Product],
         synchronize: true,
       }),
-      inject: [ConfigService],
     }),
 
     // Configures API request throttling to limit the number of requests a client can make in a given time period
@@ -67,9 +67,12 @@ import { BullModule } from '@nestjs/bullmq';
     LoggerModule.forRoot({
       pinoHttp: {
         transport: {
-          target: 'pino-pretty'
-        }
-      }
+          target: 'pino-pretty',
+          options: {
+            colorize: true,
+          },
+        },
+      },
     }),
     // export class MyService {
     //   constructor(private readonly logger: Logger) {}
@@ -78,16 +81,33 @@ import { BullModule } from '@nestjs/bullmq';
     //   }
     // }
 
-    // Configures caching with Redis
+    // Configures caching with Redis and loads variables from .env file 
+    CacheModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        store: redisStore,
+        host: configService.get<string>('REDIS_HOST'),
+        port: configService.get<number>('REDIS_PORT'),
+        username: configService.get<string>('REDIS_USER'),
+        password: configService.get<string>('REDIS_PASSWORD'),
+      }),
+    }),
+    // You can override TTL per key: cacheManager.set(key, value, { ttl: 60 }).
+    // You can also manually delete a cached key: cacheManager.del(key).
 
-    // Configures BullMQ for background job processing with Redis as the message broker
-    BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST,
-        port: parseInt(process.env.REDIS_PORT) || 6379,
-        username: process.env.REDIS_USER,
-        password: process.env.REDIS_PASSWORD,
-      },
+    // Configures BullMQ for background job processing with Redis as the message broker and loads variables from .env file 
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        connection: {
+          host: configService.get<string>('REDIS_HOST'),
+          port: configService.get<number>('REDIS_PORT'),
+          username: configService.get<string>('REDIS_USER'),
+          password: configService.get<string>('REDIS_PASSWORD'),
+        },
+      })
     }),
     // BullModule.registerQueue({
     //   name: 'emailQueue',
@@ -97,13 +117,4 @@ import { BullModule } from '@nestjs/bullmq';
   // providers: [emailProcessor],
 })
 
-export class AppModule {
-// export class AppModule implements NestModule {
-
-  // configure(consumer: MiddlewareConsumer) {
-    
-  //   consumer.apply(LoggerMiddleware).forRoutes('*');
-  // }
-
-
-}
+export class AppModule {}

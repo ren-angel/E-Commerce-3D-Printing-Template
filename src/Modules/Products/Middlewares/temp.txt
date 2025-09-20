@@ -1,0 +1,4 @@
+Webhook raw body
+For Stripe/PayPal webhooks, need a special raw body parser to verify signatures.
+
+StripeWebhookExceptionFilter → transform payment provider errors.
