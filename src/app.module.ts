@@ -92,6 +92,7 @@ import { BullModule } from '@nestjs/bullmq';
         username: configService.get<string>('REDIS_USER'),
         password: configService.get<string>('REDIS_PASSWORD'),
       }),
+      isGlobal: true,
     }),
     // You can override TTL per key: cacheManager.set(key, value, { ttl: 60 }).
     // You can also manually delete a cached key: cacheManager.del(key).
