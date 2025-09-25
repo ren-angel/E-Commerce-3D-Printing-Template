@@ -1,4 +1,3 @@
-
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -7,6 +6,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-ioredis';
+import { RedisClientProvider, RedlockProvider } from './Modules/Shared/redis.provider';
 import { BullModule } from '@nestjs/bullmq';
 // import { ProductModule } from './infrastructure/http/modules/product.module';
 // import { Product } from './domain/entities/product.entity';
@@ -116,6 +116,8 @@ import { BullModule } from '@nestjs/bullmq';
     // ProductModule,
   ],
   // providers: [emailProcessor],
+  providers: [RedisClientProvider, RedlockProvider],
+  exports: [RedisClientProvider, RedlockProvider],
 })
 
 export class AppModule {}

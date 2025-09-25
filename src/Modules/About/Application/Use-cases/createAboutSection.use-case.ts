@@ -1,5 +1,4 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import { CacheService } from "src/Modules/Shared/cache.service";
 import { AboutRepositoryInterface } from "../../Domain/Repositories/about.repository.interface";
 import { CreateAboutSectionDto } from "../../Interfaces/DTOs/create-about-section.dto";
@@ -24,7 +23,7 @@ export class CreateAboutSectionUseCase {
         this.logger.log('Creating about section...');
         const aboutSection = await this.aboutRepository.create(createAboutSectionDto);
 
-        // Apply jitter and mutex locks
+        // Apply mutex locks
         await this.cacheService.set(`about-section:${aboutSection.aboutId}`, aboutSection, 3600 * 24); // Cache for 24 hours
 
         this.logger.log('About section created successfully');
