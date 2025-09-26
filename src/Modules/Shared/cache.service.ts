@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';fe
-import { Redlock, ResourceLockedError } from 'redlock';
+import { Cache } from 'cache-manager';
+import Redlock, { ResourceLockedError } from 'redlock';
 
 // Service for interacting with the cache, providing methods to get and set cached values
 @Injectable()
@@ -9,50 +9,14 @@ export class CacheService {
 
     // Injecting the cache manager using the CACHE_MANAGER token and Redlock for distributed locking
     constructor(
-        @Inject(CACHE_MANAGER) private readonly cache: Cache
+        @Inject(CACHE_MANAGER) private readonly cache: Cache,
         @Inject('REDLOCK') private readonly redlock: Redlock,
     ) {}
 
-    // Method to retrieve a value from the cache by its key, returning a Promise that resolves to the value of type T (T means generic type) or undefined if the key does not exist
-    async get<T>(key: string): Promise<T | undefined> {
-
-        return this.cache.get<T>(key);
-    }
-
-    // Method to store a value in the cache with a specified TTL in seconds, returning a Promise that resolves when the value is set
-    async set<T>(key: string, value: T, ttl: number): Promise<void> {
-        
-        // Add up to 60 seconds of random jitter to the TTL to prevent cache stampedes
-        const jitter = Math.floor(Math.random() * 60);
-        ttl += jitter;
-
-        await this.cache.set(key, value, ttl);
-    }
-
-    // Method to delete a value from the cache by its key, returning a Promise that resolves when the key is deleted
-    async del(key: string): Promise<void> {
-
-        await this.cache.del(key);
-    }
-
-    // Method to clear all entries in the cache, returning a Promise that resolves when the cache is reset
-    async reset(): Promise<void> {
-        
-        await this.cache.clear();
-    }
-
-    difference
-    slug
-    interfere
-    withLock: Use this when you need the process to wait until the lock is available and you're sure that blocking the execution is acceptable.
-    Examples: Critical section where consistency is more important than speed (e.g., updating a shared database entry, modifying a critical resource).
-    tryWithLock: Use this when you need to attempt to acquire the lock but don’t want to block the execution. If the lock is unavailable, you can handle the failure appropriately.
-    Examples: Background jobs, queues, or any system where you can skip a task if the resource is locked (e.g., retrying a non-urgent task later or handling alternative logic).
-
-    // Try to acquire a lock for the specified resource and execute the provided function while holding the lock, ensuring that only one process can execute the critical section at a time.
+    // Try to acquire a lock for the specified resource and execute the provided function while holding the lock, ensuring that only one process can execute the critical section at a time. Use this when you need the process to wait until the lock is available and you're sure that blocking the execution is acceptable.
     async withLock<T>(
         resource: string,       // Resource refers to the key or identifier for the lock (e.g., 'product:123')
-        ttl: number,            // TTL (Time-To-Live) is the duration in milliseconds for which the lock should be held (e.g., 1000 ms)
+        ttl: number,            // TTL (Time-To-Live) is the duration in milliseconds for which the lock should be held. TTL must be longer than the longest expected critical section (DB + cache write). Add margin (e.g., expected 1s → TTL 5000ms).
         fn: () => Promise<T>,   // fn is the function to execute while holding the lock, which returns a Promise of type T
     ): Promise<T> {
 
@@ -71,28 +35,127 @@ export class CacheService {
         }
     }
 
-    // Try to acquire a lock for the specified resource and execute the provided function if the lock is acquired, returning null if the lock is not available. This method is useful for non-blocking operations where you want to skip execution if the resource is locked, for example, 
+    // Try to acquire a lock for the specified resource and execute the provided function if the lock is acquired, returning null if the lock is not available. Use this when you want to attempt to acquire the lock but don’t want to block the execution.
+    // Use tryWithLock for background/async tasks where skipping is OK.
     async tryWithLock<T>(
         resource: string,
         ttl: number,
         fn: () => Promise<T>,
     ): Promise<T | null> {
-        try {
-        const lock = await this.redlock.acquire([`locks:${resource}`], ttl, {
-            retryCount: 0, // don’t retry, fail fast
-        });
 
         try {
-            return await fn();
-        } finally {
-            await lock.release().catch(() => {});
-        }
+
+            // Attempt to acquire the lock for the specified resource with the given TTL
+            const lock = await this.redlock.acquire([`locks:${resource}`], ttl, {
+                retryCount: 0, // don’t retry, fail fast
+            });
+
+            try {
+
+                // If the lock is successfully acquired, execute the provided function and return its result
+                return await fn();
+            } finally {
+
+                // Ensure the lock is released after the function execution, even if an error occurs, to prevent deadlocks.
+                // Redlock may auto-release if TTL expired, so we catch and ignore errors on release to avoid unhandled promise rejections
+                await lock.release().catch(() => {});
+            }
         } catch (err) {
-        if (err instanceof ResourceLockedError) {
-            return null; // lock not available
+
+            // If the lock could not be acquired because it is already held by another process, return null
+            if (err instanceof ResourceLockedError) {
+
+                return null;
+            }
+
+            // For any other errors, rethrow the error to be handled by the caller
+            throw err;
         }
-        throw err; // some other error
+    }
+
+    // Method to retrieve a value from the cache by its key, returning a Promise that resolves to the value of type T (T means generic type) or undefined if the key does not exist
+    async get<T>(key: string): Promise<T | undefined> {
+
+        return this.cache.get<T>(key);
+    }
+
+    // Method to set a value in the cache with a specified key and TTL (time-to-live) in seconds, returning a Promise that resolves when the value is set. This method uses a mutex lock to prevent cache stampedes by ensuring that only one process can set the value for a given key at a time. If the value is already present in the cache, it returns the cached value immediately.
+    async setWithLock<T>(key: string, ttl: number, value: T, lockTtl = 5000): Promise<T> {
+
+        // First, check if the value is already in the cache
+        try {
+
+            // Try to acquire the lock and set the value if not present
+            return await this.withLock(key, lockTtl, async () => {
+
+                // Double check if another process has already set the value while we were waiting for the lock
+                const cacheExists = await this.cache.get<T>(key);
+                if (cacheExists) return cacheExists;
+
+                // Add up to 60 seconds of random jitter to the TTL to prevent cache stampedes
+                const jitter = Math.floor(Math.random() * 60);
+                ttl += jitter;
+
+                await this.cache.set(key, value, ttl);
+
+                // Return the value that was set in the cache for convenience
+                return value;
+            });
+        } catch (err) {
+
+            // If couldn't get the lock, poll the cache until the writer finishes
+            const started = Date.now();
+            const waitTimeout = 3000;
+
+            // While the wait timeout has not been reached, keep checking the cache
+            while (Date.now() - started < waitTimeout) {
+
+                const cachedValue = await this.cache.get<T>(key);
+                if (cachedValue) return cachedValue;
+
+                // Wait a short period (100ms) before checking again to avoid busy-waiting, with r being a resolve function of a Promise that resolves after the timeout
+                await new Promise((r) => setTimeout(r, 100));
+            }
+
+            // If the value is still not in the cache after the timeout, throw an error
+            throw new Error(`Timeout waiting for cached value ${key} after ${waitTimeout}ms with error "${err.message}"`);
         }
+    }
+
+    async setWithSoftLock<T>(key: string, ttl: number, value: T, lockTtl = 5000): Promise<T | null> {
+
+        // Try to acquire the lock and set the value if not present
+        const result = await this.tryWithLock(key, lockTtl, async () => {
+
+            // Double check if another process has already set the value while we were waiting for the lock
+            const cacheExists = await this.cache.get<T>(key);
+            if (cacheExists) return cacheExists;
+
+            // Add up to 60 seconds of random jitter to the TTL to prevent cache stampedes
+            const jitter = Math.floor(Math.random() * 60);
+            ttl += jitter;
+
+            await this.cache.set(key, value, ttl);
+
+            // Return the value that was set in the cache for convenience
+            return value;
+        });
+
+        // If couldn't get the lock, return null to indicate that the value was not set
+        return result;
+    }
+
+
+    // Method to delete a value from the cache by its key, returning a Promise that resolves when the key is deleted
+    async del(key: string): Promise<void> {
+
+        await this.cache.del(key);
+    }
+
+    // Method to clear all entries in the cache, returning a Promise that resolves when the cache is reset
+    async reset(): Promise<void> {
+
+        await this.cache.clear();
     }
 }
 
