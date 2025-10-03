@@ -10,11 +10,14 @@ export interface AboutRepositoryInterface {
     // Method for creating a new About section using the provided DTO and returning a Promise that resolves to the created AboutEntity
     create(createAboutSectionDto: CreateAboutSectionDto): Promise<AboutEntity>;
 
+    // Method for retrieving the IDs of all About sections, returning a Promise that resolves to an array of numbers
+    findAllIds(): Promise<number[]>;
+
     // Method for retrieving all About sections using the provided DTO, returning a Promise that resolves to an array of AboutDto or null if none exist
-    findAll(aboutDto: AboutDto): Promise<AboutDto[] | null>;
+    findById(ids: number[]): Promise<AboutDto[] | null>;
     
     // Method for retrieving a specific About section by its ID using the provided DTO, returning a Promise that resolves to the AboutDto or null if not found
-    findOne(aboutId: number, aboutDto: AboutDto): Promise<AboutDto | null>;
+    findOne(aboutId: number): Promise<AboutDto | null>;
 
     // Method for updating an existing About section identified by its ID using the provided DTO, returning a Promise that resolves to an UpdateResult or null if the update fails
     update(aboutId: number, updateAboutSectionDto: UpdateAboutSectionDto): Promise<UpdateResult | null>;

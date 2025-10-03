@@ -79,72 +79,60 @@ export class CacheService {
         return this.cache.get<T>(key);
     }
 
-    // Method to set a value in the cache with a specified key and TTL (time-to-live) in seconds, returning a Promise that resolves when the value is set. This method uses a mutex lock to prevent cache stampedes by ensuring that only one process can set the value for a given key at a time. If the value is already present in the cache, it returns the cached value immediately.
-    async setWithLock<T>(key: string, ttl: number, value: T, lockTtl = 5000): Promise<T> {
+    // Method to retrieve multiple values from the cache by their key, returning a Promise that resolves to the value of type T or undefined if the key does not exist
+    async mget<T>(keys: string[]): Promise<(T | undefined)[]> {
 
-        // First, check if the value is already in the cache
-        try {
-
-            // Try to acquire the lock and set the value if not present
-            return await this.withLock(key, lockTtl, async () => {
-
-                // Double check if another process has already set the value while we were waiting for the lock
-                const cacheExists = await this.cache.get<T>(key);
-                if (cacheExists) return cacheExists;
-
-                // Add up to 60 seconds of random jitter to the TTL to prevent cache stampedes
-                const jitter = Math.floor(Math.random() * 60);
-                ttl += jitter;
-
-                await this.cache.set(key, value, ttl);
-
-                // Return the value that was set in the cache for convenience
-                return value;
-            });
-        } catch (err) {
-
-            // If couldn't get the lock, poll the cache until the writer finishes
-            const started = Date.now();
-            const waitTimeout = 3000;
-
-            // While the wait timeout has not been reached, keep checking the cache
-            while (Date.now() - started < waitTimeout) {
-
-                const cachedValue = await this.cache.get<T>(key);
-                if (cachedValue) return cachedValue;
-
-                // Wait a short period (100ms) before checking again to avoid busy-waiting, with r being a resolve function of a Promise that resolves after the timeout
-                await new Promise((r) => setTimeout(r, 100));
-            }
-
-            // If the value is still not in the cache after the timeout, throw an error
-            throw new Error(`Timeout waiting for cached value ${key} after ${waitTimeout}ms with error "${err.message}"`);
-        }
+        return this.cache.mget<T>(keys);
     }
 
-    async setWithSoftLock<T>(key: string, ttl: number, value: T, lockTtl = 5000): Promise<T | null> {
+    // Method to set a value in the cache with a specified key and TTL (time-to-live) in milliseconds, returning a Promise that resolves when the value is set
+    async set<T>(key: string, value: T, ttl: number): Promise<void> {
 
-        // Try to acquire the lock and set the value if not present
-        const result = await this.tryWithLock(key, lockTtl, async () => {
+        // Double check if the value is already in the cache to avoid unnecessary writes
+        const cacheExists = await this.cache.get<T>(key);
+        if (cacheExists) return;
 
-            // Double check if another process has already set the value while we were waiting for the lock
-            const cacheExists = await this.cache.get<T>(key);
-            if (cacheExists) return cacheExists;
+        // Add up to 60 milliseconds of random jitter to the TTL to prevent cache stampedes
+        const jitter = Math.floor(Math.random() * 60);
+        ttl += jitter;
 
-            // Add up to 60 seconds of random jitter to the TTL to prevent cache stampedes
+        // Set the fetched value in the cache with the specified TTL
+        await this.cache.set(key, value, ttl);
+    }
+
+    // Method to set multiple values in the cache with their respective keys and a common TTL (time-to-live) in milliseconds, returning a Promise that resolves when all values are set
+    async mset<T>(payload: Array<{ key: string; value: T }>, ttl: number): Promise<void> {
+
+        // Extract keys to check for their existence in the cache
+        const keys = payload.map(item => item.key);
+        const existingItems = await this.cache.mget<T>(keys);
+        const existingKeys = Object.keys(existingItems);
+
+        // Filter out items that are already in the cache
+        const itemsToSet = payload.filter(item => !existingKeys.includes(item.key));
+
+        // If all items already exist in the cache, no need to proceed
+        if (itemsToSet.length === 0) {
+
+            return;
+        }
+
+        // Prepare the payload for the cache's mset command, adding jitter to each item's TTL
+        const msetPayload = itemsToSet.map(item => {
+
+            // Add up to 60 milliseconds of random jitter to the TTL
             const jitter = Math.floor(Math.random() * 60);
-            ttl += jitter;
 
-            await this.cache.set(key, value, ttl);
-
-            // Return the value that was set in the cache for convenience
-            return value;
+            return {
+                key: item.key,
+                value: item.value,
+                ttl: ttl + jitter,
+            };
         });
 
-        // If couldn't get the lock, return null to indicate that the value was not set
-        return result;
+        // Set the new values in the cache
+        await this.cache.mset(msetPayload);
     }
-
 
     // Method to delete a value from the cache by its key, returning a Promise that resolves when the key is deleted
     async del(key: string): Promise<void> {
@@ -157,6 +145,80 @@ export class CacheService {
 
         await this.cache.clear();
     }
+
+    // Method to set a value in the cache with a specified key and TTL (time-to-live) in seconds, returning a Promise that resolves when the value is set. This method uses a mutex lock to prevent cache stampedes by ensuring that only one process can set the value for a given key at a time. If the value is already present in the cache, it returns the cached value immediately.
+    // async setWithLock<T>(key: string, ttl: number, fetcher: () => Promise<T>, lockTtl = 5000): Promise<T> {
+
+    //     // First, check if the value is already in the cache
+    //     try {
+
+    //         // Try to acquire the lock and set the value if not present
+    //         return await this.withLock(key, lockTtl, async () => {
+
+    //             // Double check if another process has already set the value while we were waiting for the lock
+    //             const cacheExists = await this.cache.get<T>(key);
+    //             if (cacheExists) return cacheExists;
+
+    //             // Add up to 60 seconds of random jitter to the TTL to prevent cache stampedes
+    //             const jitter = Math.floor(Math.random() * 60);
+    //             ttl += jitter;
+
+    //             // Fetch the value using the provided fetcher function
+    //             const value = await fetcher();
+
+    //             // Set the fetched value in the cache with the specified TTL
+    //             await this.cache.set(key, value, ttl);
+
+    //             // Return the value that was set in the cache for convenience
+    //             return value;
+    //         });
+    //     } catch (err) {
+
+    //         // If couldn't get the lock, poll the cache until the writer finishes
+    //         const started = Date.now();
+    //         const waitTimeout = 3000;
+
+    //         // While the wait timeout has not been reached, keep checking the cache
+    //         while (Date.now() - started < waitTimeout) {
+
+    //             const cachedValue = await this.cache.get<T>(key);
+    //             if (cachedValue) return cachedValue;
+
+    //             // Wait a short period (100ms) before checking again to avoid busy-waiting, with r being a resolve function of a Promise that resolves after the timeout
+    //             await new Promise((r) => setTimeout(r, 100));
+    //         }
+
+    //         // If the value is still not in the cache after the timeout, throw an error
+    //         throw new Error(`Timeout waiting for cached value ${key} after ${waitTimeout}ms with error "${err.message}"`);
+    //     }
+    // }
+
+    // async setWithSoftLock<T>(key: string, ttl: number, fetcher: () => Promise<T>, lockTtl = 5000): Promise<T | null> {
+
+    //     // Try to acquire the lock and set the value if not present
+    //     const result = await this.tryWithLock(key, lockTtl, async () => {
+
+    //         // Double check if another process has already set the value while we were waiting for the lock
+    //         const cacheExists = await this.cache.get<T>(key);
+    //         if (cacheExists) return cacheExists;
+
+    //         // Add up to 60 seconds of random jitter to the TTL to prevent cache stampedes
+    //         const jitter = Math.floor(Math.random() * 60);
+    //         ttl += jitter;
+
+    //         // Fetch the value using the provided fetcher function
+    //         const value = await fetcher();
+
+    //         // Set the fetched value in the cache with the specified TTL
+    //         await this.cache.set(key, value, ttl);
+
+    //         // Return the value that was set in the cache for convenience
+    //         return value;
+    //     });
+
+    //     // If couldn't get the lock, return null to indicate that the value was not set
+    //     return result;
+    // }
 }
 
 // key naming: <domain>:<entity>:<id>[:extra]

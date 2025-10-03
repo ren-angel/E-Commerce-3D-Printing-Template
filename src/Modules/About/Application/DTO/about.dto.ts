@@ -5,6 +5,9 @@ export class AboutDto {
 
   // Expose decorator to include these fields when transforming the entity to this DTO
   @Expose()
+  aboutId: string;
+
+  @Expose()
   section: string;
   
   @Expose()

@@ -8,7 +8,6 @@ import { AboutEntity } from "../../Domain/Entities/about.entity";
 @Injectable()
 export class CreateAboutSectionUseCase {
 
-
     // Injecting the About repository, Cache service and Logger using dependency injection for the use case to interact with the data layer, caching layer and log important information or errors
     constructor(
         @Inject('AboutRepositoryInterface')
@@ -21,10 +20,14 @@ export class CreateAboutSectionUseCase {
     async execute(createAboutSectionDto: CreateAboutSectionDto): Promise<AboutEntity> {
 
         this.logger.log('Creating about section...');
+
+        // Create the about section in the repository
         const aboutSection = await this.aboutRepository.create(createAboutSectionDto);
 
-        // Apply mutex locks
-        await this.cacheService.set(`about-section:${aboutSection.aboutId}`, aboutSection, 3600 * 24); // Cache for 24 hours
+        // await this.cacheService.del('about-sections:list');
+        // or append?
+        // cache it if it returns the data properly, although it will have to be converted to about dto first
+        // do all this with lock because of list consisttency
 
         this.logger.log('About section created successfully');
         return aboutSection;

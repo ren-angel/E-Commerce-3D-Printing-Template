@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { plainToClass } from "class-transformer";
+import { In, Repository } from "typeorm";
+import { plainToClass, plainToInstance } from "class-transformer";
 import { AboutRepositoryInterface } from "src/Modules/About/Domain/Repositories/about.repository.interface";
 import { AboutEntity } from "src/Modules/About/Domain/entities/about.entity";
 import { AboutDto } from "../../Application/DTO/about.dto";
@@ -14,27 +14,38 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
 
     // Injecting the TypeORM repository for the AboutEntity, with the private access modifier to create and initialize the aboutRepository property, and readonly to prevent reassignment after initialization
     constructor(@InjectRepository(AboutEntity) private readonly aboutRepository: Repository<AboutEntity>) {}
+    
+    // Method to retrieve all about section IDs from the database
+    async findAllIds(): Promise<number[]> {
+        
+        const aboutSections = await this.aboutRepository.find({ select: ['aboutId'] });
+        
+        return aboutSections.map(section => section.aboutId);
+    }
+    
+    // Method to retrieve all about sections from the database
+    async findById(ids: number[]): Promise<AboutDto[] | null> {
+        
+        // const aboutSections = this.aboutRepository.find({ order: { sectionPosition: 'ASC' }, where: { aboutId: In(ids) } });
+        const aboutSections = this.aboutRepository.find({ where: { aboutId: In(ids) } });
+        
+        return plainToInstance(AboutDto as any, aboutSections);
+    }
+    
+    // Method to retrieve a single about section by its ID
+    async findOne(aboutId: number): Promise<AboutDto | null> {
+        
+        const aboutSection = this.aboutRepository.findOne({ where: { aboutId } });
+        
+        return plainToInstance(AboutDto as any, aboutSection);
+    }
 
     // Method to create and save a new about section in the database
     create(createAboutSectionDto: CreateAboutSectionDto) {
 
         return this.aboutRepository.save(createAboutSectionDto);
-    }
 
-    // Method to retrieve all about sections from the database
-    findAll(aboutDto: AboutDto): Promise<AboutDto[] | null> {
-        
-        const aboutSections = this.aboutRepository.find();
-
-        return plainToClass(aboutDto as any, aboutSections) as Promise<AboutDto[] | null>;
-    }
-
-    // Method to retrieve a single about section by its ID
-    findOne(aboutId: number, aboutDto: AboutDto): Promise<AboutDto | null> {
-        
-        const aboutSection = this.aboutRepository.findOne({ where: { aboutId } });
-
-        return plainToClass(aboutDto as any, aboutSection) as Promise<AboutDto | null>;
+        // return dto
     }
 
     // Method to update an existing about section by its ID
