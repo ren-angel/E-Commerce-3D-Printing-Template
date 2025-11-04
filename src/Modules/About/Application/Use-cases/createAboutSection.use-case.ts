@@ -19,17 +19,34 @@ export class CreateAboutSectionUseCase {
     // Method to execute the use case, taking a CreateAboutSectionDto as input, caching the created about section, and returning a Promise that resolves to the created AboutEntity
     async execute(createAboutSectionDto: CreateAboutSectionDto): Promise<AboutEntity> {
 
-        this.logger.log('Creating about section...');
+        const listKey = 'about-sections:list';
+        const sectionKey = 'about-section';
+        // const lockTtl = 2000; // 2 seconds in milliseconds
+        const sectionTtl = (60000 * 60) * 24; // 24 hours in milliseconds
 
-        // Create the about section in the repository
-        const aboutSection = await this.aboutRepository.create(createAboutSectionDto);
+        try {
 
-        // await this.cacheService.del('about-sections:list');
-        // or append?
-        // cache it if it returns the data properly, although it will have to be converted to about dto first
-        // do all this with lock because of list consisttency
+            this.logger.log('Creating about section...');
+    
+            // Create the about section in the repository
+            const aboutSection = await this.aboutRepository.create(createAboutSectionDto);
+            
+            // cache it if it returns the data properly, although it will have to be converted to about dto first
 
-        this.logger.log('About section created successfully');
-        return aboutSection;
+            // do all this with lock because of list consistency?
+
+            // await this.cacheService.del('about-sections:list');
+            // or append?
+            // await this.cacheService.rpush(listKey, aboutSection.aboutId);
+
+    
+            this.logger.log('About section created successfully');
+            return aboutSection;
+        } catch (err) {
+
+            // Log the error and rethrow a generic error message
+            this.logger.error('Error creating about sections:', err);
+            throw new Error('Erro ao criar as seção.');
+        }
     }
 }
