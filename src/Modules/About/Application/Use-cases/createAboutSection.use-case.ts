@@ -21,7 +21,6 @@ export class CreateAboutSectionUseCase {
 
         const listKey = 'about-sections:list';
         const sectionKey = 'about-section';
-        // const lockTtl = 2000; // 2 seconds in milliseconds
         const sectionTtl = (60000 * 60) * 24; // 24 hours in milliseconds
 
         try {
@@ -30,13 +29,27 @@ export class CreateAboutSectionUseCase {
     
             // Create the about section in the repository
             const aboutSection = await this.aboutRepository.create(createAboutSectionDto);
+
+            if ()
             
             // cache it if it returns the data properly, although it will have to be converted to about dto first
 
-            // do all this with lock because of list consistency?
+            
+            // await this.cacheService.del('about-sections:list'); for small/medium lists that are quick to rebuild
+            
+            // or append? append is for lists that are inserted frequently and requires lock for list consistency and two inserts not overwrite each other
+            // await lock.acquire('products:list', async () => {
+            // const cachedList = await cache.get('products:list');
+            // if (Array.isArray(cachedList)) {
+            //     cachedList.push(newProduct);
+            //     await cache.set('products:list', cachedList);
+            // } else {
+            //     await cache.del('products:list');
+            // }
+            // });
 
-            // await this.cacheService.del('about-sections:list');
-            // or append?
+            // locks for upd and del
+
             // await this.cacheService.rpush(listKey, aboutSection.aboutId);
 
     
