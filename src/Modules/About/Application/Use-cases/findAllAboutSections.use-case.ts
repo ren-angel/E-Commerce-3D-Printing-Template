@@ -18,7 +18,7 @@ export class FindAllAboutSectionsUseCase {
 
         const listKey = 'about-sections:list';
         const sectionKey = 'about-section';
-        const lockTtl = 2000; // 2 seconds in milliseconds
+        const lockTtl = 2000; // 2 seconds in milliseconds. Lock has to last longer than the function it's running
         const sectionTtl = (60000 * 60) * 24; // 24 hours in milliseconds
 
         try {
@@ -35,7 +35,7 @@ export class FindAllAboutSectionsUseCase {
 
                 // First, acquire a lock to prevent cache stampede
                 aboutSectionsIds = await this.cacheService.withLock(
-                    listKey,
+                    `read:${listKey}`,
                     lockTtl,
                     async () => this.aboutRepository.findAllIds(),
                 );
@@ -107,7 +107,7 @@ export class FindAllAboutSectionsUseCase {
             // Fetch all the missing about sections from the repository and cache each section individually
             // Once again, use a lock to prevent cache stampede
             const missingSections = await this.cacheService.withLock(
-                `${listKey}:fetch`,
+                `read:${listKey}:fetch`,
                 lockTtl,
                 async () => this.aboutRepository.findById(misses)
             )

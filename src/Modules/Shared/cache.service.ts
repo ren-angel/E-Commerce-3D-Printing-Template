@@ -134,6 +134,12 @@ export class CacheService {
         await this.cache.mset(msetPayload);
     }
 
+    
+    async rpush<T>(listKey, itemKey): Promise<void> {
+
+
+    }
+
     // Method to delete a value from the cache by its key, returning a Promise that resolves when the key is deleted
     async del(key: string): Promise<void> {
 

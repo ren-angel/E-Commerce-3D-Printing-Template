@@ -43,15 +43,17 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
     // Method to create and save a new about section in the database
     create(createAboutSectionDto: CreateAboutSectionDto) {
 
-        return this.aboutRepository.save(createAboutSectionDto);
+        const newAboutSection = this.aboutRepository.save(createAboutSectionDto);
 
-        // return dto
+        return plainToInstance(AboutDto as any, newAboutSection);
     }
 
     // Method to update an existing about section by its ID
     update(aboutId: number, updateAboutSectionDto: UpdateAboutSectionDto) {
 
-        return this.aboutRepository.update(aboutId, updateAboutSectionDto);
+        const updatedAboutSection = this.aboutRepository.save(aboutId, updateAboutSectionDto);
+
+        return plainToInstance(AboutDto as any, updatedAboutSection);
     }
 
     // Method to remove an about section by its ID

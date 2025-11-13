@@ -21,6 +21,7 @@ export class CreateAboutSectionUseCase {
 
         const listKey = 'about-sections:list';
         const sectionKey = 'about-section';
+        const lockTtl = 2000; // 2 seconds in milliseconds. Lock has to last longer than the function it's running
         const sectionTtl = (60000 * 60) * 24; // 24 hours in milliseconds
 
         try {
@@ -28,16 +29,27 @@ export class CreateAboutSectionUseCase {
             this.logger.log('Creating about section...');
     
             // Create the about section in the repository
-            const aboutSection = await this.aboutRepository.create(createAboutSectionDto);
+            const newAboutSection = this.aboutRepository.create(createAboutSectionDto);
 
-            if ()
+            if (!newAboutSection) {
+
+                this.logger.log('No section was created.');
+                return null;
+            }
+
+            this.logger.log('Section successfully created on database. Appending the result onto its appropriate cache list...');
+
+            // Appending the result to cache list with rpush to avoid multiple inserts overwriting each other. If something goes wrong on the append, deletes list to be recreated on the next read
+            
+            // insert rpush here. Finish making it on cache service
+
+            this.logger.log()
             
             // cache it if it returns the data properly, although it will have to be converted to about dto first
 
             
             // await this.cacheService.del('about-sections:list'); for small/medium lists that are quick to rebuild
-            
-            // or append? append is for lists that are inserted frequently and requires lock for list consistency and two inserts not overwrite each other
+
             // await lock.acquire('products:list', async () => {
             // const cachedList = await cache.get('products:list');
             // if (Array.isArray(cachedList)) {
