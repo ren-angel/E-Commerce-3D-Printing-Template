@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import Redis from 'ioredis';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import Redlock, { ResourceLockedError } from 'redlock';
@@ -10,6 +11,7 @@ export class CacheService {
     // Injecting the cache manager using the CACHE_MANAGER token and Redlock for distributed locking
     constructor(
         @Inject(CACHE_MANAGER) private readonly cache: Cache,
+        @Inject('REDIS_CLIENT') private readonly redis: Redis,
         @Inject('REDLOCK') private readonly redlock: Redlock,
     ) {}
 
@@ -85,6 +87,12 @@ export class CacheService {
         return this.cache.mget<T>(keys);
     }
 
+    // Method to retrieve a list from cache by it's key, starting from the beginning (0) to the last element (-1), returning a Promise that resolves to string[] as lrange always returns a string
+    async lrange(listKey: string): Promise<(string[])> {
+
+        return this.redis.lrange(listKey, 0, -1);
+    }
+
     // Method to set a value in the cache with a specified key and TTL (time-to-live) in milliseconds, returning a Promise that resolves when the value is set
     async set<T>(key: string, value: T, ttl: number): Promise<void> {
 
@@ -135,9 +143,21 @@ export class CacheService {
     }
 
     
-    async rpush<T>(listKey, itemKey): Promise<void> {
+    // Method to set/append a value to a list in the cache with a specified key and setting the list's TTL (time-to-live) in milliseconds, returning a Promise that resolves when the stringfied value is set
+    async rpush<T>(listKey: string, value: T, ttl: number): Promise<void> {
 
+        // Add up to 60 milliseconds of random jitter to the TTL
+        const jitter = Math.floor(Math.random() * 60);
+        ttl += jitter;
 
+        // Redis only stores strings, so serialize anything that is not already a string
+        const serialized = typeof value === "string"
+            ? value
+            : JSON.stringify(value);
+
+        await this.redis.rpush(listKey, serialized);
+
+        await this.redis.expire(listKey, ttl, "NX");
     }
 
     // Method to delete a value from the cache by its key, returning a Promise that resolves when the key is deleted

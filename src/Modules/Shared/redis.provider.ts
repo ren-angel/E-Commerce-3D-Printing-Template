@@ -1,10 +1,24 @@
 import { Provider } from '@nestjs/common'; // Provider interface from NestJS for defining custom providers, with providers being a fundamental part of NestJS's dependency injection system
-import Redlock from 'redlock';
+import Redis from 'ioredis';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import Redlock from 'redlock';
+
+// Provider for the Redis client without the cache manager internal one for ioredis client usage
+export const RedisClientProvider: Provider = {
+  provide: 'REDIS_CLIENT',
+  useFactory() {
+      return new Redis({
+        host: process.env.REDIS_HOST,
+        port: parseInt(process.env.REDIS_PORT),
+        username: process.env.REDIS_USER,
+        password: process.env.REDIS_PASSWORD,
+    });
+  },
+}
 
 // Provider for the Redis client, which retrieves the underlying ioredis client from the cache manager
-export const RedisClientProvider: Provider = {
+export const CacheManagerClient: Provider = {
   provide: 'REDIS_CLIENT',
   inject: [CACHE_MANAGER],
   useFactory: (cache: Cache) => {

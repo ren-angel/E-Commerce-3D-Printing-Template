@@ -1,4 +1,4 @@
-// Remember to delete item and maybe if possible remove id from list
+// Remember to delete item and maybe if possible remove id from list. use lock?
 
 
 

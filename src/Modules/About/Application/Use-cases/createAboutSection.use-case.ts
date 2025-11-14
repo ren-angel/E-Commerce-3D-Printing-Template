@@ -2,7 +2,8 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { CacheService } from "src/Modules/Shared/cache.service";
 import { AboutRepositoryInterface } from "../../Domain/Repositories/about.repository.interface";
 import { CreateAboutSectionDto } from "../../Interfaces/DTOs/create-about-section.dto";
-import { AboutEntity } from "../../Domain/Entities/about.entity";
+// import { AboutEntity } from "../../Domain/Entities/about.entity";
+import { AboutDto } from "../DTO/about.dto";
 
 // Use case for creating an about section
 @Injectable()
@@ -17,11 +18,10 @@ export class CreateAboutSectionUseCase {
     ) {}
 
     // Method to execute the use case, taking a CreateAboutSectionDto as input, caching the created about section, and returning a Promise that resolves to the created AboutEntity
-    async execute(createAboutSectionDto: CreateAboutSectionDto): Promise<AboutEntity> {
+    async execute(createAboutSectionDto: CreateAboutSectionDto): Promise<AboutDto> {
 
         const listKey = 'about-sections:list';
         const sectionKey = 'about-section';
-        const lockTtl = 2000; // 2 seconds in milliseconds. Lock has to last longer than the function it's running
         const sectionTtl = (60000 * 60) * 24; // 24 hours in milliseconds
 
         try {
@@ -29,7 +29,7 @@ export class CreateAboutSectionUseCase {
             this.logger.log('Creating about section...');
     
             // Create the about section in the repository
-            const newAboutSection = this.aboutRepository.create(createAboutSectionDto);
+            const newAboutSection = await this.aboutRepository.create(createAboutSectionDto);
 
             if (!newAboutSection) {
 
@@ -39,34 +39,16 @@ export class CreateAboutSectionUseCase {
 
             this.logger.log('Section successfully created on database. Appending the result onto its appropriate cache list...');
 
-            // Appending the result to cache list with rpush to avoid multiple inserts overwriting each other. If something goes wrong on the append, deletes list to be recreated on the next read
-            
-            // insert rpush here. Finish making it on cache service
+            // Appending the result to cache list with rpush to avoid multiple inserts overwriting each other
+            await this.cacheService.rpush<string>(listKey, newAboutSection.aboutId, sectionTtl)
 
-            this.logger.log()
-            
-            // cache it if it returns the data properly, although it will have to be converted to about dto first
+            this.logger.log('Caching the new section...');
 
-            
-            // await this.cacheService.del('about-sections:list'); for small/medium lists that are quick to rebuild
-
-            // await lock.acquire('products:list', async () => {
-            // const cachedList = await cache.get('products:list');
-            // if (Array.isArray(cachedList)) {
-            //     cachedList.push(newProduct);
-            //     await cache.set('products:list', cachedList);
-            // } else {
-            //     await cache.del('products:list');
-            // }
-            // });
-
-            // locks for upd and del
-
-            // await this.cacheService.rpush(listKey, aboutSection.aboutId);
-
+            // Caching newly created section
+            await this.cacheService.set(`${sectionKey}:${newAboutSection.aboutId}`, newAboutSection, sectionTtl);
     
-            this.logger.log('About section created successfully');
-            return aboutSection;
+            this.logger.log('About section cached successfully');
+            return newAboutSection;
         } catch (err) {
 
             // Log the error and rethrow a generic error message

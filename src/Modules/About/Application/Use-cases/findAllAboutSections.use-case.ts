@@ -26,7 +26,8 @@ export class FindAllAboutSectionsUseCase {
             this.logger.log('Fetching all about sections IDs from cache...');
         
             // Getting the cached IDs
-            let aboutSectionsIds = await this.cacheService.get<number[]>(listKey);
+            const rawAboutSectionsIds = await this.cacheService.lrange(listKey); // returns strings
+            let aboutSectionsIds = rawAboutSectionsIds.map(id => Number(id)); // convert to numbers
 
             // if couldn't find any cached IDs, then fetch IDs from the repository and cache them
             if (!aboutSectionsIds || aboutSectionsIds.length === 0) {
@@ -50,7 +51,7 @@ export class FindAllAboutSectionsUseCase {
                 this.logger.log('Sections IDs fetched successfully. Caching the result...')
 
                 // Cache the fetched IDs for future requests
-                await this.cacheService.set<number[]>(listKey, aboutSectionsIds, sectionTtl);
+                await this.cacheService.rpush<number[]>(listKey, aboutSectionsIds, sectionTtl);
             }
 
             this.logger.log('Sections IDs cached successfully. Fetching all about sections from cache...');
@@ -62,54 +63,31 @@ export class FindAllAboutSectionsUseCase {
             const cachedArr = await this.cacheService.mget<AboutDto | null>(keys);
 
             // Check if all sections were found in cache by filtering out any null values
-            const misses = aboutSectionsIds.filter((_, index) => !cachedArr[index]);
+            const missesIndexes = [];
+            for (let i = 0; i < cachedArr.length; i++) {
+
+                if (cachedArr[i] == null) missesIndexes.push(i);
+            }
 
             // If all sections are found in cache, return them as an array of AboutDto
-            if (misses.length === 0) {
+            if (missesIndexes.length === 0) {
                 
                 this.logger.log('About sections fetched from cache successfully.');
 
                 return cachedArr as AboutDto[];
             }
 
-            // Since all sections are cached individually, fetch each section by its ID using Promise.all to handle multiple asynchronous calls
-            // const cachedSections = await Promise.all(
-            //     aboutSectionsIds.map(async (id) => {
-                
-            //         try {
-
-            //             const section = await this.cacheService.get<AboutDto | null>(`${sectionKey}:${id}`);
-
-            //             // If section is not found in cache, return null for this ID
-            //             return section ?? null;
-            //         } catch (err) {
-
-            //             // Log the error but continue fetching other sections
-            //             this.logger.error(`Error fetching about section with ID ${id} from cache:`, err);
-            //             return null;
-            //         } 
-            //     })
-            // );
-
-            // // Filter out any null values from the cached sections and treat the result as an array of AboutDto 
-            // const presentSections = cachedSections.filter((s): s is AboutDto => s != null);
-
-            // // If all sections are found in cache, return them
-            // if (presentSections.length === aboutSectionsIds.length) {
-
-            //     this.logger.log('About sections fetched from cache successfully.');
-
-            //     return presentSections;
-            // }
-
             this.logger.log('Cache miss (partial/full). Fetching missing about sections from repository...');
 
             // Fetch all the missing about sections from the repository and cache each section individually
+            // Translates the missing indexes into the corresponding IDs from aboutSectionsIds
+            const missedIds = missesIndexes.map(i => aboutSectionsIds[i]);
+            
             // Once again, use a lock to prevent cache stampede
             const missingSections = await this.cacheService.withLock(
                 `read:${listKey}:fetch`,
                 lockTtl,
-                async () => this.aboutRepository.findById(misses)
+                async () => this.aboutRepository.findById(missedIds)
             )
 
             // If no sections are found, return null
@@ -121,16 +99,11 @@ export class FindAllAboutSectionsUseCase {
 
             this.logger.log('About sections fetched successfully. Caching the result...');
 
-            // Creating the payload for setting multiple values in the cache
-            const msetPayload = [];
-
-            // For each missing section, prepare the key-value pair for caching
-            for (const section of missingSections) {
-                msetPayload.push({
-                    key: `${sectionKey}:${section.aboutId}`,
-                    value: section
-                });
-            }
+            // Creating the payload for setting multiple values in the cache, mapping through each section
+            const msetPayload = missingSections.map(section => ({
+                key: `${sectionKey}:${section.aboutId}`,
+                value: section,
+            }));
 
             await this.cacheService.mset(msetPayload, sectionTtl);
         

@@ -1,4 +1,4 @@
-// Remember to delete item in cache, then set item again after update. Maybe delete list if order change is important?
+// Remember to delete item in cache, then set item again after update. use lock?
 
 
 

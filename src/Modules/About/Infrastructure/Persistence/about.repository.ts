@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
-import { plainToClass, plainToInstance } from "class-transformer";
+import { plainToInstance } from "class-transformer";
 import { AboutRepositoryInterface } from "src/Modules/About/Domain/Repositories/about.repository.interface";
 import { AboutEntity } from "src/Modules/About/Domain/entities/about.entity";
 import { AboutDto } from "../../Application/DTO/about.dto";
@@ -27,7 +27,7 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
     async findById(ids: number[]): Promise<AboutDto[] | null> {
         
         // const aboutSections = this.aboutRepository.find({ order: { sectionPosition: 'ASC' }, where: { aboutId: In(ids) } });
-        const aboutSections = this.aboutRepository.find({ where: { aboutId: In(ids) } });
+        const aboutSections = await this.aboutRepository.find({ where: { aboutId: In(ids) } });
         
         return plainToInstance(AboutDto as any, aboutSections);
     }
@@ -35,29 +35,37 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
     // Method to retrieve a single about section by its ID
     async findOne(aboutId: number): Promise<AboutDto | null> {
         
-        const aboutSection = this.aboutRepository.findOne({ where: { aboutId } });
+        const aboutSection = await this.aboutRepository.findOne({ where: { aboutId } });
         
         return plainToInstance(AboutDto as any, aboutSection);
     }
 
     // Method to create and save a new about section in the database
-    create(createAboutSectionDto: CreateAboutSectionDto) {
+    async create(createAboutSectionDto: CreateAboutSectionDto): Promise<AboutDto> {
 
-        const newAboutSection = this.aboutRepository.save(createAboutSectionDto);
+        const newAboutSection = await this.aboutRepository.save(createAboutSectionDto);
 
         return plainToInstance(AboutDto as any, newAboutSection);
     }
 
     // Method to update an existing about section by its ID
-    update(aboutId: number, updateAboutSectionDto: UpdateAboutSectionDto) {
+    async update(aboutId: number, updateAboutSectionDto: UpdateAboutSectionDto): Promise<AboutDto | null> {
 
-        const updatedAboutSection = this.aboutRepository.save(aboutId, updateAboutSectionDto);
+        // Checks if entity exists and replaces it
+        const preload = await this.aboutRepository.preload({
+            aboutId: aboutId,
+            ...updateAboutSectionDto,
+        });
 
-        return plainToInstance(AboutDto as any, updatedAboutSection);
+        if (!preload) return null; // entity not found
+
+        const updated = await this.aboutRepository.save(preload);
+
+        return plainToInstance(AboutDto, updated);
     }
 
     // Method to remove an about section by its ID
-    remove(aboutId: number) {
+    async remove(aboutId: number) {
 
         return this.aboutRepository.delete(aboutId);
     }
