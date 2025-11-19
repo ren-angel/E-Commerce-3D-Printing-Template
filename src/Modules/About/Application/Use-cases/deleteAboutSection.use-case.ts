@@ -41,7 +41,7 @@ export class DeleteAboutSectionUseCase {
             
             this.logger.log('Cached section successfully deleted. Updating the cached section list...');
     
-            
+            // Delete item from list cache
 
             this.logger.log('Section list successfully updated');
             
