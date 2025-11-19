@@ -38,23 +38,31 @@ export class FindAllAboutSectionsUseCase {
                 aboutSectionsIds = await this.cacheService.withLock(
                     `read:${listKey}`,
                     lockTtl,
-                    async () => this.aboutRepository.findAllIds(),
+                    async () => {
+                        const ids = await this.aboutRepository.findAllIds()
+
+                        if (ids.length > 0) {
+
+                            this.logger.log('Sections IDs fetched successfully. Caching the result...');
+
+                            // Rebuilds the cache list with the fetched IDs
+                            await this.cacheService.del(listKey)
+                            await this.cacheService.rpush<number[]>(listKey, ids, sectionTtl);
+
+                            this.logger.log('Sections IDs cached successfully.');
+                        } else {
+
+                            // If no IDs are found, return null
+                            this.logger.log('No about sections found in repository.');
+                            return null;
+                        }
+
+                        return ids;
+                    },
                 );
-
-                // If no IDs are found, return null
-                if (!aboutSectionsIds || aboutSectionsIds.length === 0) {
-
-                    this.logger.log('No about sections found in repository.');
-                    return null;
-                }
-
-                this.logger.log('Sections IDs fetched successfully. Caching the result...')
-
-                // Cache the fetched IDs for future requests
-                await this.cacheService.rpush<number[]>(listKey, aboutSectionsIds, sectionTtl);
             }
 
-            this.logger.log('Sections IDs cached successfully. Fetching all about sections from cache...');
+            this.logger.log('Fetching all about sections from cache...');
 
             // Creating keys for each section based on their IDs
             const keys = aboutSectionsIds.map(id => `${sectionKey}:${id}`);
@@ -83,12 +91,14 @@ export class FindAllAboutSectionsUseCase {
             // Translates the missing indexes into the corresponding IDs from aboutSectionsIds
             const missedIds = missesIndexes.map(i => aboutSectionsIds[i]);
             
+            // Fetching missing sections from the repository
+            const missingSections = await this.aboutRepository.findById(missedIds);
             // Once again, use a lock to prevent cache stampede
-            const missingSections = await this.cacheService.withLock(
-                `read:${listKey}:fetch`,
-                lockTtl,
-                async () => this.aboutRepository.findById(missedIds)
-            )
+            // const missingSections = await this.cacheService.withLock(
+            //     `read:${listKey}:fetch`,
+            //     lockTtl,
+            //     async () => this.aboutRepository.findById(missedIds)
+            // )
 
             // If no sections are found, return null
             if (!missingSections || missingSections.length === 0) {
@@ -117,6 +127,7 @@ export class FindAllAboutSectionsUseCase {
             });
 
             this.logger.log('About sections cached successfully.');
+
             return result;
 
             // If mapping for adjusting the order is necessary:

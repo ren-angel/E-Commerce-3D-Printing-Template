@@ -48,12 +48,13 @@ export class CreateAboutSectionUseCase {
             await this.cacheService.set(`${sectionKey}:${newAboutSection.aboutId}`, newAboutSection, sectionTtl);
     
             this.logger.log('About section cached successfully');
+
             return newAboutSection;
         } catch (err) {
 
             // Log the error and rethrow a generic error message
-            this.logger.error('Error creating about sections:', err);
-            throw new Error('Erro ao criar as seção.');
+            this.logger.error('Error creating the about section:', err);
+            throw new Error('Erro ao criar a seção.');
         }
     }
 }
