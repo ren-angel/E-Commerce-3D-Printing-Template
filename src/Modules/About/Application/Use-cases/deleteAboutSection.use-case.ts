@@ -1,40 +1,56 @@
-// Remember to delete item and maybe if possible remove id from list. use lock?
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import { CacheService } from "src/Modules/Shared/cache.service";
+import { AboutRepositoryInterface } from "../../Domain/Repositories/about.repository.interface";
+import { DeleteResult } from "typeorm";
 
+// Use case for deleting an about section
+@Injectable()
+export class DeleteAboutSectionUseCase {
 
+    // Injecting the About repository, Cache service and Logger using dependency injection for the use case to interact with the data layer, caching layer and log important information or errors
+    constructor(
+        @Inject('AboutRepositoryInterface')
+        private readonly aboutRepository: AboutRepositoryInterface,
+        private readonly cacheService: CacheService,
+        private readonly logger: Logger,
+    ) {}
 
+    // Method to execute the use case, taking the section ID as input, deleting the section from the database and cache, and returning a Promise that resolves to a DeleteResult
+    async execute(aboutId: number): Promise<DeleteResult> {
 
-// import { Inject, Injectable, Logger } from "@nestjs/common";
-// import { CacheService } from "src/Modules/Shared/cache.service";
-// import { AboutRepositoryInterface } from "../../Domain/Repositories/about.repository.interface";
-// import { CreateAboutSectionDto } from "../../Interfaces/DTOs/create-about-section.dto";
-// import { AboutEntity } from "../../Domain/Entities/about.entity";
+        const listKey = 'about-sections:list';
+        const sectionKey = 'about-section';
 
-// // Use case for creating an about section
-// @Injectable()
-// export class CreateAboutSectionUseCase {
+        try {
 
-//     // Injecting the About repository, Cache service and Logger using dependency injection for the use case to interact with the data layer, caching layer and log important information or errors
-//     constructor(
-//         @Inject('AboutRepositoryInterface')
-//         private readonly aboutRepository: AboutRepositoryInterface,
-//         private readonly cacheService: CacheService,
-//         private readonly logger: Logger,
-//     ) {}
+            this.logger.log('Deleting about section from the database...');
+    
+            // Deletes the about section in the repository
+            const deletedResult = await this.aboutRepository.remove(aboutId);
 
-//     // Method to execute the use case, taking a CreateAboutSectionDto as input, caching the created about section, and returning a Promise that resolves to the created AboutEntity
-//     async execute(createAboutSectionDto: CreateAboutSectionDto): Promise<AboutEntity> {
+            if (!deletedResult) {
 
-//         this.logger.log('Creating about section...');
+                this.logger.log('No section was deleted.');
+                return null;
+            }
+            
+            this.logger.log('Section successfully deleted from the database. Deleting the section from the cache...');
 
-//         // Create the about section in the repository
-//         const aboutSection = await this.aboutRepository.create(createAboutSectionDto);
+            // Deleting the section on cache
+            await this.cacheService.del(`${sectionKey}:${aboutId}`);
+            
+            this.logger.log('Cached section successfully deleted. Updating the cached section list...');
+    
+            
 
+            this.logger.log('Section list successfully updated');
+            
+            return deletedResult;
+        } catch (err) {
 
-//         // await this.cacheService.del('about-sections:list');
-
-//         // cache it if it returns the data properly, although it will have to be converted to about dto first
-
-//         this.logger.log('About section created successfully');
-//         return aboutSection;
-//     }
-// }
+            // Log the error and rethrow a generic error message
+            this.logger.error('Error deleting the about section:', err);
+            throw new Error('Erro ao remover a seção.');
+        }
+    }
+}

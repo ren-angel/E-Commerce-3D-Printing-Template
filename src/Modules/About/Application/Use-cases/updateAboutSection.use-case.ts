@@ -5,7 +5,7 @@ import { UpdateAboutSectionDto } from "../../Interfaces/DTOs/update-about-sectio
 // import { AboutEntity } from "../../Domain/Entities/about.entity";
 import { AboutDto } from "../DTO/about.dto";
 
-// Use case for creating an about section
+// Use case for updating an about section
 @Injectable()
 export class UpdateAboutSectionUseCase {
 
