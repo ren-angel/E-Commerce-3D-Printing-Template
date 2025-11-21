@@ -26,9 +26,9 @@ export class DeleteAboutSectionUseCase {
             this.logger.log('Deleting about section from the database...');
     
             // Deletes the about section in the repository
-            const deletedResult = await this.aboutRepository.remove(aboutId);
+            const deleted = await this.aboutRepository.remove(aboutId);
 
-            if (!deletedResult) {
+            if (!deleted) {
 
                 this.logger.log('No section was deleted.');
                 return null;
@@ -41,11 +41,12 @@ export class DeleteAboutSectionUseCase {
             
             this.logger.log('Cached section successfully deleted. Updating the cached section list...');
     
-            // Delete item from list cache
+            // Deleting the section id from the section list cache
+            await this.cacheService.lrem<number>(listKey, 0, aboutId);
 
             this.logger.log('Section list successfully updated');
             
-            return deletedResult;
+            return deleted;
         } catch (err) {
 
             // Log the error and rethrow a generic error message

@@ -115,7 +115,8 @@ export class FindAllAboutSectionsUseCase {
                 value: section,
             }));
 
-            await this.cacheService.mset(msetPayload, sectionTtl);
+            // Caching the missing sections in bulk
+            await this.cacheService.mset<AboutDto>(msetPayload, sectionTtl);
         
             // Combine cached sections and newly fetched sections, ensuring the order matches the original IDs
             // Create a map (object that holds key-value pairs and remembers the original insertion order of the keys) for quick lookup of missing sections by their ID

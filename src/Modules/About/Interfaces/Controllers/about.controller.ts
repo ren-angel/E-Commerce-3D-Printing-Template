@@ -1,52 +1,62 @@
 import { Controller, UseGuards, Get, Post, Body, Put, Param, Delete } from '@nestjs/common';
-import { CreateProductDto } from '../../../application/dtos/create-product.dto';
-import { UpdateProductDto } from '../../../application/dtos/update-product.dto';
+import { CreateAboutSectionDto } from '../DTOs/create-about-section.dto';
+import { UpdateAboutSectionDto } from '../DTOs/update-about-section.dto';
 
-import { CreateProductUseCase } from 'src/application/use-cases/createProduct.use-case';
-import { FindAllProductsUseCase } from 'src/application/use-cases/findAllProducts.use-case';
-import { FindOneProductUseCase } from 'src/application/use-cases/findOneProduct.use-case';
-import { UpdateProductUseCase } from 'src/application/use-cases/updateProduct.use-case';
-import { RemoveProductUseCase } from 'src/application/use-cases/removeProduct.use-case';
+import { FindAllAboutSectionsUseCase } from '../../Application/Use-cases/findAllAboutSections.use-case copy';
+import { FindOneAboutSectionsUseCase } from '../../Application/Use-cases/findOneAboutSections.use-case';
+import { CreateAboutSectionUseCase } from '../../Application/Use-cases/createAboutSection.use-case';
+import { UpdateAboutSectionUseCase } from '../../Application/Use-cases/updateAboutSection.use-case';
+import { DeleteAboutSectionUseCase } from '../../Application/Use-cases/deleteAboutSection.use-case';
 
-@Controller('product')
+// Controller for managing about sections, handling HTTP requests and delegating to use cases
+@Controller('about')
 // @UseGuards(JwtAuthGuard)
-export class ProductController {
+export class AboutController {
 
+  // Injecting the necessary use cases for handling about section operations
   constructor(
-    private readonly createProductUseCase: CreateProductUseCase,
-    private readonly findAllProductsUseCase: FindAllProductsUseCase,
-    private readonly findOneProductUseCase: FindOneProductUseCase,
-    private readonly updateProductUseCase: UpdateProductUseCase,
-    private readonly removeProductUseCase: RemoveProductUseCase,
+    private readonly findAllAboutSectionsUseCase: FindAllAboutSectionsUseCase,
+    private readonly findOneAboutSectionsUseCase: FindOneAboutSectionsUseCase,
+    private readonly createAboutSectionUseCase: CreateAboutSectionUseCase,
+    private readonly updateAboutSectionUseCase: UpdateAboutSectionUseCase,
+    private readonly deleteAboutSectionUseCase: DeleteAboutSectionUseCase,
   ) {}
 
-  @Post()
-  create(@Body() createProductDto: CreateProductDto) {
-
-    return this.createProductUseCase.execute(createProductDto);
-  }
-
+  // Endpoint to retrieve all about sections
   @Get()
   findAll() {
 
-    return this.findAllProductsUseCase.execute();
+    return this.findAllAboutSectionsUseCase.execute();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
+  // Endpoint to retrieve a single about section by its ID
+  @Get(':aboutId')
+  findOne(@Param('aboutId') aboutId: string) {
 
-    return this.findOneProductUseCase.execute(+id);
+    // + operator to convert string to number
+    return this.findOneAboutSectionsUseCase.execute(+aboutId);
   }
 
-  @Put(':id')
-  update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
+  // Endpoint to create a new about section
+  @Post()
+  create(@Body() createAboutSectionDto: CreateAboutSectionDto) {
 
-    return this.updateProductUseCase.execute(+id, updateProductDto);
+    return this.createAboutSectionUseCase.execute(createAboutSectionDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
+  // Endpoint to update an existing about section by its ID
+  @Put(':aboutId')
+  update(@Param('aboutId') aboutId: string, @Body() updateAboutSectionDto: UpdateAboutSectionDto) {
+
+    // + operator to convert string to number
+    return this.updateAboutSectionUseCase.execute(+aboutId, updateAboutSectionDto);
+  }
+
+  // Endpoint to delete an about section by its ID
+  @Delete(':aboutId')
+  remove(@Param('aboutId') aboutId: string) {
     
-    return this.removeProductUseCase.execute(+id);
+    // + operator to convert string to number
+    return this.deleteAboutSectionUseCase.execute(+aboutId);
   }
 }

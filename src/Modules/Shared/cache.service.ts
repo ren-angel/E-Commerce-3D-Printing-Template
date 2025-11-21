@@ -166,6 +166,17 @@ export class CacheService {
         await this.cache.del(key);
     }
 
+    // Method to remove elements from a list in the cache by its key, returning a Promise that resolves when the elements are removed
+    async lrem<T>(listKey: string, count: number, value: T): Promise<void> {
+
+        // Redis only stores strings, so serialize anything that is not already a string
+        const serialized = typeof value === "string"
+            ? value
+            : JSON.stringify(value);
+
+        await this.redis.lrem(listKey, count, serialized);
+    }
+
     // Method to clear all entries in the cache, returning a Promise that resolves when the cache is reset
     async reset(): Promise<void> {
 

@@ -46,7 +46,7 @@ export class UpdateAboutSectionUseCase {
             this.logger.log('Old section deleted from cache. Caching the updated section...');
 
             // Caching updated section
-            await this.cacheService.set(`${sectionKey}:${aboutId}`, updatedAboutSection, sectionTtl);
+            await this.cacheService.set<AboutDto>(`${sectionKey}:${aboutId}`, updatedAboutSection, sectionTtl);
     
             this.logger.log('About section cached successfully');
             
