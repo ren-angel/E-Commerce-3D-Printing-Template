@@ -9,6 +9,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-ioredis';
 import { RedisClientProvider, CacheManagerClient, RedlockProvider } from './Modules/Shared/redis.provider';
 import { BullModule } from '@nestjs/bullmq';
+import { SharedModule } from './Modules/Shared/shared.module';
 import { AboutModule } from './Modules/About/about.module';
 import { AboutEntity } from './Modules/About/Domain/Entities/about.entity';
 
@@ -109,6 +110,7 @@ import { AboutEntity } from './Modules/About/Domain/Entities/about.entity';
     //   name: 'emailQueue',
     // }),
 
+    SharedModule,
     AboutModule,
   ],
   // providers: [emailProcessor],
