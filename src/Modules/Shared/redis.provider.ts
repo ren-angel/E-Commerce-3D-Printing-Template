@@ -1,7 +1,5 @@
 import { Provider } from '@nestjs/common'; // Provider interface from NestJS for defining custom providers, with providers being a fundamental part of NestJS's dependency injection system
 import Redis from 'ioredis';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
 import Redlock from 'redlock';
 
 // Provider for the Redis client without the cache manager internal one for ioredis client usage
@@ -14,17 +12,6 @@ export const RedisClientProvider: Provider = {
         username: process.env.REDIS_USER,
         password: process.env.REDIS_PASSWORD,
     });
-  },
-}
-
-// Provider for the Redis client, which retrieves the underlying ioredis client from the cache manager
-export const CacheManagerClient: Provider = {
-  provide: 'REDIS_CACHE',
-  inject: [CACHE_MANAGER],
-  useFactory: (cache: Cache) => {
-    
-    // Access the underlying ioredis client from the cache manager. Uses the 'as any' type assertion to bypass TypeScript's type checking, as the stores property is not part of the official Cache interface
-    return (cache.stores as any).getClient();
   },
 };
 
