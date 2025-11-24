@@ -14,5 +14,5 @@ export class AboutDto {
   sectionPosition: number;
   
   @Expose()
-  contextText: string;
+  contentText: string;
 }

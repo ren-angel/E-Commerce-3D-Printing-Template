@@ -16,5 +16,5 @@ export class CreateAboutSectionDto {
   // Context text must be a non-empty string
   @IsString({ message: 'Texto do conteúdo deve ser um texto válido.'})
   @IsNotEmpty({ message: 'Texto do conteúdo não pode estar vazio.'})
-  contextText: string;
+  contentText: string;
 }
