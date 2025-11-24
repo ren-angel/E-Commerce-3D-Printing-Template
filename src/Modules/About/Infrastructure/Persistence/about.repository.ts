@@ -3,7 +3,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { In, Repository } from "typeorm";
 import { plainToInstance } from "class-transformer";
 import { AboutRepositoryInterface } from "src/Modules/About/Domain/Repositories/about.repository.interface";
-import { AboutEntity } from "src/Modules/About/Domain/entities/about.entity";
+import { AboutEntity } from "../../Domain/Entities/about.entity";
 import { AboutDto } from "../../Application/DTO/about.dto";
 import { CreateAboutSectionDto } from "src/Modules/About/Interfaces/DTOs/create-about-section.dto";
 import { UpdateAboutSectionDto } from "src/Modules/About/Interfaces/DTOs/update-about-section.dto";

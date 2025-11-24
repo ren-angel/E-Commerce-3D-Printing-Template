@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 // import { AuthModule } from 'src/infrastructure/http/modules/auth.module';
 import { AboutController } from './Interfaces/Controllers/about.controller';
 import { AboutEntity } from './Domain/Entities/about.entity';
-import { FindAllAboutSectionsUseCase } from './Application/Use-cases/findAllAboutSections.use-case copy';
+import { FindAllAboutSectionsUseCase } from './Application/Use-cases/findAllAboutSections.use-case';
 import { FindOneAboutSectionsUseCase } from './Application/Use-cases/findOneAboutSections.use-case';
 import { CreateAboutSectionUseCase } from './Application/Use-cases/createAboutSection.use-case';
 import { UpdateAboutSectionUseCase } from './Application/Use-cases/updateAboutSection.use-case';

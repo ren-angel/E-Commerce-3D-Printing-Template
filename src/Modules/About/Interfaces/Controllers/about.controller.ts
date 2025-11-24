@@ -2,7 +2,7 @@ import { Controller, UseGuards, Get, Post, Body, Put, Param, Delete } from '@nes
 import { CreateAboutSectionDto } from '../DTOs/create-about-section.dto';
 import { UpdateAboutSectionDto } from '../DTOs/update-about-section.dto';
 
-import { FindAllAboutSectionsUseCase } from '../../Application/Use-cases/findAllAboutSections.use-case copy';
+import { FindAllAboutSectionsUseCase } from '../../Application/Use-cases/findAllAboutSections.use-case';
 import { FindOneAboutSectionsUseCase } from '../../Application/Use-cases/findOneAboutSections.use-case';
 import { CreateAboutSectionUseCase } from '../../Application/Use-cases/createAboutSection.use-case';
 import { UpdateAboutSectionUseCase } from '../../Application/Use-cases/updateAboutSection.use-case';
