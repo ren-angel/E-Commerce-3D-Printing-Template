@@ -11,8 +11,8 @@ export class CacheService {
     // Injecting the cache manager using the CACHE_MANAGER token and Redlock for distributed locking
     constructor(
         @Inject(CACHE_MANAGER) private readonly cache: Cache,
-        @Inject('REDIS_CLIENT') private readonly redis: Redis,
-        @Inject('REDLOCK') private readonly redlock: Redlock,
+        @Inject('REDIS_RAW') private readonly redis: Redis,
+        @Inject('REDIS_LOCK') private readonly redlock: Redlock,
     ) {}
 
     // Try to acquire a lock for the specified resource and execute the provided function while holding the lock, ensuring that only one process can execute the critical section at a time. Use this when you need the process to wait until the lock is available and you're sure that blocking the execution is acceptable.

@@ -6,7 +6,7 @@ import Redlock from 'redlock';
 
 // Provider for the Redis client without the cache manager internal one for ioredis client usage
 export const RedisClientProvider: Provider = {
-  provide: 'REDIS_CLIENT',
+  provide: 'REDIS_RAW',
   useFactory() {
       return new Redis({
         host: process.env.REDIS_HOST,
@@ -19,7 +19,7 @@ export const RedisClientProvider: Provider = {
 
 // Provider for the Redis client, which retrieves the underlying ioredis client from the cache manager
 export const CacheManagerClient: Provider = {
-  provide: 'REDIS_CLIENT',
+  provide: 'REDIS_CACHE',
   inject: [CACHE_MANAGER],
   useFactory: (cache: Cache) => {
     
@@ -30,8 +30,8 @@ export const CacheManagerClient: Provider = {
 
 // Provider for the RedLock instance, which is used for distributed locking with Redis
 export const RedlockProvider: Provider = {
-  provide: 'REDLOCK',
-  inject: ['REDIS_CLIENT'],
+  provide: 'REDIS_LOCK',
+  inject: ['REDIS_RAW'],
   useFactory: (redisClient) => {
     return new Redlock([redisClient], {
       retryCount: 5,        // Number of times to retry acquiring the lock before failing

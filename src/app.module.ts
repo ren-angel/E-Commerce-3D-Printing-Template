@@ -7,7 +7,7 @@ import { ThrottlerModule, ThrottlerGuard, seconds } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-ioredis';
-import { RedisClientProvider, CacheManagerClient, RedlockProvider } from './Modules/Shared/redis.provider';
+// import { RedisClientProvider, CacheManagerClient, RedlockProvider } from './Modules/Shared/redis.provider';
 import { BullModule } from '@nestjs/bullmq';
 import { SharedModule } from './Modules/Shared/shared.module';
 import { AboutModule } from './Modules/About/about.module';
@@ -120,11 +120,11 @@ import { AboutEntity } from './Modules/About/Domain/Entities/about.entity';
       useClass: ThrottlerGuard, // Applies the throttling rules defined in ThrottlerModule globally across all controllers
     },
 
-    RedisClientProvider,
-    CacheManagerClient,
-    RedlockProvider,
+    // RedisClientProvider,
+    // CacheManagerClient,
+    // RedlockProvider,
   ],
-  exports: [RedisClientProvider, CacheManagerClient, RedlockProvider],
+  // exports: [RedisClientProvider, CacheManagerClient, RedlockProvider],
 })
 
 export class AppModule {}
