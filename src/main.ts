@@ -5,7 +5,7 @@ import { TransformInterceptor } from './Modules/Shared/transform.interceptor';
 import { TimeoutInterceptor } from './Modules/Shared/timeout.interceptor';
 import { ResponseTimeInterceptor } from './Modules/Shared/response-time.interceptor';
 import { Logger } from 'nestjs-pino';
-import * as morgan from 'morgan';
+// import * as morgan from 'morgan'; // Uncomment when testing locally, comment before deployment
 import helmet from 'helmet';
 import * as compression from 'compression';
 import { AppModule } from './app.module';
@@ -32,7 +32,7 @@ async function bootstrap() {
   );
   
   app.useLogger(app.get(Logger));         // pino logger for structured logging
-  app.use(morgan('dev'));                 // morgan logging for HTTP requests during development using the 'dev' format for concise logs
+  // app.use(morgan('dev'));              // morgan logging for HTTP requests during development using the 'dev' format for concise logs
   app.use(helmet());                      // Helmet helps secure your app by setting various HTTP headers
   app.use(compression());                 // Compression middleware to reduce the size of the response body and improve the speed of web applications
   
