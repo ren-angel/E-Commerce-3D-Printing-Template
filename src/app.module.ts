@@ -1,15 +1,16 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard, seconds } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { CacheModule } from '@nestjs/cache-manager';
 import * as redisStore from 'cache-manager-ioredis';
 import { RedisClientProvider, CacheManagerClient, RedlockProvider } from './Modules/Shared/redis.provider';
 import { BullModule } from '@nestjs/bullmq';
-// import { ProductModule } from './infrastructure/http/modules/product.module';
-// import { Product } from './domain/entities/product.entity';
+import { AboutModule } from './Modules/About/about.module';
+import { AboutEntity } from './Modules/About/Domain/Entities/about.entity';
 
 @Module({
   imports: [
@@ -40,7 +41,7 @@ import { BullModule } from '@nestjs/bullmq';
         username: configService.get<string>('DB_USER'),
         password: configService.get<string>('DB_PASSWORD'),
         database: configService.get<string>('DB_NAME'),
-        // entities: [Product],
+        entities: [AboutEntity],
         synchronize: true,
       }),
     }),
@@ -49,8 +50,8 @@ import { BullModule } from '@nestjs/bullmq';
     ThrottlerModule.forRoot({
       throttlers: [
         {
-          ttl: 60,
-          limit: 100
+          ttl: seconds(60), // time to live in seconds. 1 minute for all endpoints by default
+          limit: 100 // max number of requests within the ttl. 100 requests per minute for all endpoints by default
         }
       ]
     }),
@@ -58,7 +59,9 @@ import { BullModule } from '@nestjs/bullmq';
     // product list/images served by CDN?
     // Search endpoints: limit = 60, ttl = 60 (or 120/60 if search is cheap)
     // Checkout / payment endpoints: limit = 10, ttl = 60
+    // Auth (login / OTP / password-reset): very strict limit = 5, ttl = 300 (5 attempts per 5 minutes) — prevents brute force/OTP abuse. 
     // Admin / management APIs: limit = 30, ttl = 60
+    // Different keys for throttling: per-user (userId), per-API-key, or per-IP. Authenticated requests should be keyed by user or API token; anonymous by IP.
     // (HTTP 429 + Retry-After header and a JSON body explaining limit and reset time). OWASP recommends notifying clients when the limit is exceeded)
     // X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset so front-ends (or mobile apps) can gracefully degrade
     // push static and heavy read requests to CDN;
@@ -74,12 +77,6 @@ import { BullModule } from '@nestjs/bullmq';
         },
       },
     }),
-    // export class MyService {
-    //   constructor(private readonly logger: Logger) {}
-    //   doStuff() {
-    //     this.logger.info({ foo: 'bar' }, 'Something happened');
-    //   }
-    // }
 
     // Configures caching with Redis and loads variables from .env file 
     CacheModule.registerAsync({
@@ -94,8 +91,6 @@ import { BullModule } from '@nestjs/bullmq';
       }),
       isGlobal: true,
     }),
-    // You can override TTL per key: cacheManager.set(key, value, { ttl: 60 }).
-    // You can also manually delete a cached key: cacheManager.del(key).
 
     // Configures BullMQ for background job processing with Redis as the message broker and loads variables from .env file 
     BullModule.forRootAsync({
@@ -113,10 +108,20 @@ import { BullModule } from '@nestjs/bullmq';
     // BullModule.registerQueue({
     //   name: 'emailQueue',
     // }),
-    // ProductModule,
+
+    AboutModule,
   ],
   // providers: [emailProcessor],
-  providers: [RedisClientProvider, CacheManagerClient, RedlockProvider],
+  providers: [
+    {
+      provide: APP_GUARD,       // Global application guard for rate limiting using ThrottlerGuard
+      useClass: ThrottlerGuard, // Applies the throttling rules defined in ThrottlerModule globally across all controllers
+    },
+
+    RedisClientProvider,
+    CacheManagerClient,
+    RedlockProvider,
+  ],
   exports: [RedisClientProvider, CacheManagerClient, RedlockProvider],
 })
 

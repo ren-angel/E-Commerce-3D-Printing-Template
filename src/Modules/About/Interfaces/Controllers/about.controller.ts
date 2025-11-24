@@ -7,9 +7,11 @@ import { FindOneAboutSectionsUseCase } from '../../Application/Use-cases/findOne
 import { CreateAboutSectionUseCase } from '../../Application/Use-cases/createAboutSection.use-case';
 import { UpdateAboutSectionUseCase } from '../../Application/Use-cases/updateAboutSection.use-case';
 import { DeleteAboutSectionUseCase } from '../../Application/Use-cases/deleteAboutSection.use-case';
+import { seconds, Throttle } from '@nestjs/throttler';
 
 // Controller for managing about sections, handling HTTP requests and delegating to use cases
 @Controller('about')
+@Throttle({ default: { limit: 30, ttl: seconds(60) } }) // Overriding the default throttling for this specific controller 
 // @UseGuards(JwtAuthGuard)
 export class AboutController {
 
