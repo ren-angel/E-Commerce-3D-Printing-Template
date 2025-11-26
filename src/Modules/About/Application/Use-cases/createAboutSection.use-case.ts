@@ -1,9 +1,10 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { validate } from "class-validator";
 import { CacheService } from "src/Modules/Shared/cache.service";
 import { AboutRepositoryInterface } from "../../Domain/Repositories/about.repository.interface";
 import { CreateAboutSectionDto } from "../../Interfaces/DTOs/create-about-section.dto";
-// import { AboutEntity } from "../../Domain/Entities/about.entity";
 import { AboutDto } from "../DTO/about.dto";
+import { DomainError } from "src/Modules/Shared/custom-errors.exception";
 
 // Use case for creating an about section
 @Injectable()
@@ -26,6 +27,11 @@ export class CreateAboutSectionUseCase {
 
         try {
 
+            if (!createAboutSectionDto) {
+             
+                throw new DomainError('Dados da seção são obrigatórios para criação.');
+            }
+
             this.logger.log('Creating about section...');
     
             // Create the about section in the repository
@@ -34,7 +40,16 @@ export class CreateAboutSectionUseCase {
             if (!newAboutSection) {
 
                 this.logger.log('No section was created.');
-                return null;
+                throw new DomainError('Nenhuma seção foi criada.');
+            }
+
+            // Validate the created about section DTO
+            const errors = await validate(createAboutSectionDto);
+
+            // If there are validation errors, throw an error
+            if (errors.length > 0) {
+
+                throw new DomainError(`${JSON.stringify(errors)}`);
             }
 
             this.logger.log('Section successfully created on database. Appending the result onto its appropriate cache list...');
@@ -54,6 +69,13 @@ export class CreateAboutSectionUseCase {
 
             // Log the error and rethrow a generic error message
             this.logger.error('Error creating the about section:', err);
+
+            // If it's a known/domain/internal expected error, rethrow
+            if (err instanceof DomainError) {
+                throw err;
+            }
+
+            // Otherwise, it's unexpected -> generic error
             throw new Error('Erro ao criar a seção.');
         }
     }

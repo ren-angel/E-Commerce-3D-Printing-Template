@@ -1,9 +1,10 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
+import { validate } from "class-validator";
 import { CacheService } from "src/Modules/Shared/cache.service";
 import { AboutRepositoryInterface } from "../../Domain/Repositories/about.repository.interface";
 import { UpdateAboutSectionDto } from "../../Interfaces/DTOs/update-about-section.dto";
-// import { AboutEntity } from "../../Domain/Entities/about.entity";
 import { AboutDto } from "../DTO/about.dto";
+import { DomainError } from "src/Modules/Shared/custom-errors.exception";
 
 // Use case for updating an about section
 @Injectable()
@@ -20,12 +21,15 @@ export class UpdateAboutSectionUseCase {
     // Method to execute the use case, taking the section ID and a UpdateAboutSectionDto as input, deleting the old section and caching the updated one, and returning a Promise that resolves to the updated AboutEntity
     async execute(aboutId: number, updateAboutSectionDto: UpdateAboutSectionDto): Promise<AboutDto> {
 
-        // Remember to delete item in cache, then set item again after update. use lock?
-
         const sectionKey = 'about-section';
         const sectionTtl = (60000 * 60) * 24; // 24 hours in milliseconds
 
         try {
+
+            if (!updateAboutSectionDto) {
+             
+                throw new DomainError('Dados da seção são obrigatórios para atualização.');
+            }
 
             this.logger.log('Updating about section...');
     
@@ -35,7 +39,16 @@ export class UpdateAboutSectionUseCase {
             if (!updatedAboutSection) {
 
                 this.logger.log('No section was updated.');
-                return null;
+                throw new Error('Nenhuma seção foi atualizada.');
+            }
+
+            // Validate the created about section DTO
+            const errors = await validate(updateAboutSectionDto);
+
+            // If there are validation errors, throw an error
+            if (errors.length > 0) {
+
+                throw new DomainError(`${JSON.stringify(errors)}`);
             }
 
             this.logger.log('Section successfully updated on database. Deleting the old section from cache...');
@@ -55,6 +68,13 @@ export class UpdateAboutSectionUseCase {
 
             // Log the error and rethrow a generic error message
             this.logger.error('Error updating the about section:', err);
+
+            // If it's a known/domain/internal expected error, rethrow
+            if (err instanceof DomainError) {
+                throw err;
+            }
+
+            // Otherwise, it's unexpected -> generic error
             throw new Error('Erro ao atualizar a seção.');
         }
     }

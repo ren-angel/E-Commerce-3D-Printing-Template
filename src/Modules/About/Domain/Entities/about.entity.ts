@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm'; 
 
 // Defining the AboutEntity class to represent the "About" section in the database
-@Entity()
+@Entity('about')
 export class AboutEntity {
 
   // Id column as primary key
