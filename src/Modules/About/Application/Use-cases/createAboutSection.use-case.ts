@@ -44,7 +44,7 @@ export class CreateAboutSectionUseCase {
             }
 
             // Validate the created about section DTO
-            const errors = await validate(createAboutSectionDto);
+            const errors = await validate(newAboutSection);
 
             // If there are validation errors, throw an error
             if (errors.length > 0) {

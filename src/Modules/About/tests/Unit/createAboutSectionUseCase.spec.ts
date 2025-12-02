@@ -1,8 +1,9 @@
 import { validate } from "class-validator";
 import { CreateAboutSectionUseCase } from "../../Application/Use-cases/createAboutSection.use-case";
 import { CreateAboutSectionDto } from "../../Interfaces/DTOs/create-about-section.dto";
+import { DomainError } from "src/Modules/Shared/custom-errors.exception";
 
-// Unit tests for the CreateAboutSectionUseCase>
+// Unit tests for the CreateAboutSectionUseCase
 describe('CreateAboutSectionUseCase (unit)', () => {
 
   // Variables to hold the use-case instance and mocks. Use mocks for unit testing because we want to isolate the use-case logic from external dependencies
@@ -49,12 +50,16 @@ describe('CreateAboutSectionUseCase (unit)', () => {
     dto.sectionPosition = 1;
     dto.contentText = 'Content';
 
+    // Mocked created object returned by the repository
     const created = {
       aboutId: 1,
       section: 'X',
       sectionPosition: 1,
       contentText: 'Content',
     };
+
+    // Mock the validate function to return no errors
+    jest.spyOn(require('class-validator'), 'validate').mockResolvedValue([]);
 
     // Makes repository return the created object when called. mockResolvedValue simulates an async function returning a resolved promise
     mockRepo.create.mockResolvedValue(created);
@@ -89,15 +94,17 @@ describe('CreateAboutSectionUseCase (unit)', () => {
   // Test case: repository returns null (no section created)
   it('returns null if repository returns null', async () => {
 
+    // Input DTO for creating an about section
+    const dto = new CreateAboutSectionDto();
+    dto.section = 'X';
+    dto.sectionPosition = 1;
+    dto.contentText = 'Content';
+    
     // Makes repository return null to simulate no section being created
     mockRepo.create.mockResolvedValue(null);
 
     // Expects the use-case execution to throw a specific error message
-    await expect(usecase.execute({
-      section: 'X',
-      sectionPosition: 1,
-      contentText: 'Content',
-    })).rejects.toThrow('Nenhuma seção foi criada.');
+    await expect(usecase.execute(dto)).rejects.toThrow('Nenhuma seção foi criada.');
 
     // Asserts that the logger logged the error
     expect(mockLogger.error).toHaveBeenCalled();
@@ -118,8 +125,11 @@ describe('CreateAboutSectionUseCase (unit)', () => {
     // Assert that there are validation errors
     expect(errors.length).toBeGreaterThan(0);
 
-    // Attempt to execute the use-case and expect it to throw an error
-    await expect(usecase.execute(dto)).rejects.toThrow();
+    // Mock the validate function to return errors
+    // jest.spyOn(require('class-validator'), 'validate').mockResolvedValue(errors);
+
+    // Expects the use-case execution to throw a DomainError due to validation failure
+    await expect(usecase.execute(dto)).rejects.toThrow(DomainError);
 
     // Asserts that the logger logged the error
     expect(mockLogger.error).toHaveBeenCalled();
@@ -135,20 +145,47 @@ describe('CreateAboutSectionUseCase (unit)', () => {
     expect(mockLogger.error).toHaveBeenCalled();
   });
 
+  // Test case: rethrows DomainError from repository
+  it('rethrows DomainError from repository', async () => {
+  
+    // Input DTO for creating an about section
+    const dto = new CreateAboutSectionDto();
+    dto.section = 'X';
+    dto.sectionPosition = 1;
+    dto.contentText = 'Content';
+
+    // Mock the validate function to return no errors
+    jest.spyOn(require('class-validator'), 'validate').mockResolvedValue([]);
+
+    // Makes repository.create throw a DomainError when called
+    mockRepo.create.mockRejectedValue(new DomainError('Invalid'));
+
+    // Expects the use-case execution to rethrow the DomainError
+    await expect(usecase.execute(dto)).rejects.toBeInstanceOf(DomainError);
+
+    // Asserts that the logger logged the error
+    expect(mockLogger.error).toHaveBeenCalled();
+  });
+
   // Test case: repository throws an exception
   it('throws exception when repository throws', async () => {
+
+    // Input DTO for creating an about section
+    const dto = new CreateAboutSectionDto();
+    dto.section = 'X';
+    dto.sectionPosition = 1;
+    dto.contentText = 'Content';
+
+    // Mock the validate function to return no errors
+    jest.spyOn(require('class-validator'), 'validate').mockResolvedValue([]);
 
     // Makes repository.create throw an error when called
     mockRepo.create.mockRejectedValue(new Error('DB error'));
 
     // Expects the use-case execution to throw a generic error message
-    await expect(
-      usecase.execute({
-        section: 'X',
-        sectionPosition: 1,
-        contentText: 'Content',
-      })
-    ).rejects.toThrow('Erro ao criar a seção.');
+    await expect(usecase.execute(dto)).rejects.toThrow(
+      'Erro ao atualizar a seção.'
+    );
 
     // Asserts that the logger logged the error
     expect(mockLogger.error).toHaveBeenCalled();
