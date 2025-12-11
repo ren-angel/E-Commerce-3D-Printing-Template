@@ -32,6 +32,15 @@ export class UpdateAboutSectionUseCase {
             }
 
             this.logger.log('Updating about section...');
+
+            // Validate the created about section DTO
+            const errors = await validate(updateAboutSectionDto);
+
+            // If there are validation errors, throw an error
+            if (errors.length > 0) {
+
+                throw new DomainError(`${JSON.stringify(errors)}`);
+            }
     
             // Update the about section in the repository
             const updatedAboutSection = await this.aboutRepository.update(aboutId, updateAboutSectionDto);
@@ -40,15 +49,6 @@ export class UpdateAboutSectionUseCase {
 
                 this.logger.log('No section was updated.');
                 throw new Error('Nenhuma seção foi atualizada.');
-            }
-
-            // Validate the created about section DTO
-            const errors = await validate(updatedAboutSection);
-
-            // If there are validation errors, throw an error
-            if (errors.length > 0) {
-
-                throw new DomainError(`${JSON.stringify(errors)}`);
             }
 
             this.logger.log('Section successfully updated on database. Deleting the old section from cache...');
@@ -67,11 +67,12 @@ export class UpdateAboutSectionUseCase {
         } catch (err) {
 
             // Log the error and rethrow a generic error message
-            this.logger.error('Error updating the about section:', err);
+            this.logger.error('Error updating the about section:', err.message);
 
             // If it's a known/domain/internal expected error, rethrow
             if (err instanceof DomainError) {
-                throw err;
+
+                throw err.message;
             }
 
             // Otherwise, it's unexpected -> generic error

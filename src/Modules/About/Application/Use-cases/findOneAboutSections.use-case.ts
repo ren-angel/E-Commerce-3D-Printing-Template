@@ -62,7 +62,7 @@ export class FindOneAboutSectionsUseCase {
         } catch (err) {
 
             // Log the error and rethrow a generic error message
-            this.logger.error('Error fetching about section:', err);
+            this.logger.error('Error fetching about section:', err.message);
             throw new Error('Erro ao obter a seção de "Sobre nós".');
         }
     }

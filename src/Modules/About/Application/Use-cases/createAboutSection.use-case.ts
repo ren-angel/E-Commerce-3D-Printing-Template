@@ -33,6 +33,15 @@ export class CreateAboutSectionUseCase {
             }
 
             this.logger.log('Creating about section...');
+
+            // Validate the created about section DTO
+            const errors = await validate(createAboutSectionDto);
+
+            // If there are validation errors, throw an error
+            if (errors.length > 0) {
+
+                throw new DomainError(`${JSON.stringify(errors)}`);
+            }
     
             // Create the about section in the repository
             const newAboutSection = await this.aboutRepository.create(createAboutSectionDto);
@@ -41,15 +50,6 @@ export class CreateAboutSectionUseCase {
 
                 this.logger.log('No section was created.');
                 throw new DomainError('Nenhuma seção foi criada.');
-            }
-
-            // Validate the created about section DTO
-            const errors = await validate(newAboutSection);
-
-            // If there are validation errors, throw an error
-            if (errors.length > 0) {
-
-                throw new DomainError(`${JSON.stringify(errors)}`);
             }
 
             this.logger.log('Section successfully created on database. Appending the result onto its appropriate cache list...');
@@ -68,11 +68,12 @@ export class CreateAboutSectionUseCase {
         } catch (err) {
 
             // Log the error and rethrow a generic error message
-            this.logger.error('Error creating the about section:', err);
+            this.logger.error('Error creating the about section:', err.message);
 
             // If it's a known/domain/internal expected error, rethrow
             if (err instanceof DomainError) {
-                throw err;
+
+                throw err.message;
             }
 
             // Otherwise, it's unexpected -> generic error

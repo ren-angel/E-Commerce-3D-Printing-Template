@@ -61,7 +61,7 @@ describe('UpdateAboutSectionUseCase (unit)', () => {
     // Mock the validate function to return no errors
     jest.spyOn(require('class-validator'), 'validate').mockResolvedValue([]);
 
-    //     // Makes repository return the created object when called. mockResolvedValue simulates an async function returning a resolved promise
+    // Makes repository return the created object when called. mockResolvedValue simulates an async function returning a resolved promise
     mockRepo.update.mockResolvedValue(updated);
 
     // Executes the use-case with the DTO
