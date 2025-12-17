@@ -27,7 +27,7 @@ export class CreateAboutSectionUseCase {
 
         try {
 
-            if (!createAboutSectionDto) {
+            if (!createAboutSectionDto || Object.keys(createAboutSectionDto).length === 0) {
              
                 throw new DomainError('Dados da seção são obrigatórios para criação.');
             }
@@ -35,12 +35,18 @@ export class CreateAboutSectionUseCase {
             this.logger.log('Creating about section...');
 
             // Validate the created about section DTO
-            const errors = await validate(createAboutSectionDto);
+            const errors = await validate(createAboutSectionDto, { stopAtFirstError: true });
 
             // If there are validation errors, throw an error
             if (errors.length > 0) {
 
-                throw new DomainError(`${JSON.stringify(errors)}`);
+                // Extract all constraint messages from validation errors
+                // flatMap is used to flatten the array of arrays into a single array
+                const messages = errors.flatMap(
+                    err => Object.values(err.constraints || {}) // Get constraint messages or empty array
+                );
+
+                throw new DomainError(messages.join('; ')); // Join messages into a single string. Remember to properly format on frontend
             }
     
             // Create the about section in the repository
@@ -68,12 +74,12 @@ export class CreateAboutSectionUseCase {
         } catch (err) {
 
             // Log the error and rethrow a generic error message
-            this.logger.error('Error creating the about section:', err.message);
+            this.logger.error('Error creating the about section:', err);
 
             // If it's a known/domain/internal expected error, rethrow
             if (err instanceof DomainError) {
 
-                throw err.message;
+                throw err;
             }
 
             // Otherwise, it's unexpected -> generic error

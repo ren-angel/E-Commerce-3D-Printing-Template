@@ -1,34 +1,66 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
+import { DomainError, EntityNotFoundError, InvalidEntityError, ConflictError } from '../Shared/custom-errors.exception';
 
-// Global exception filter to catch all unhandled exceptions and format the response
+// Global exception filter to handle all exceptions thrown in the application
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
 
-  // Method to catch any exception, gets the arguments being passed to the handler and formats the HTTP response accordingly 
+  // Method to catch exceptions and format the HTTP response accordingly
+  // exception is unknown to allow handling of any type of exception
+  // meanwhile host provides methods to access the request and response objects
   catch(exception: unknown, host: ArgumentsHost) {
-    
-    const ctx = host.switchToHttp();    // Switches from the generic ArgumentsHost to the HTTP context
-    const response = ctx.getResponse(); // Gets the response object to send the HTTP response
-    const request = ctx.getRequest();   // Gets the request object to access request details like URL and method
 
-    // Determines the HTTP status code and message based on whether the exception is an instance of HttpException or a generic error
-    const status =
-      exception instanceof HttpException
-        ? exception.getStatus()
-        : HttpStatus.INTERNAL_SERVER_ERROR;
+    const ctx = host.switchToHttp();    // Switch to HTTP context
+    const response = ctx.getResponse(); // Get the response object
+    const request = ctx.getRequest();   // Get the request object
 
-    // Sets the message to be sent in the response, using the exception's response if it's an HttpException, otherwise a generic message
-    const message =
-      exception instanceof HttpException
-        ? exception.getResponse()
-        : 'Erro interno do servidor. Por favor, tente novamente mais tarde. Se o problema persistir, entre em contato com o suporte.';
+    // Handle NestJS HttpException separately to extract status and response
+    if (exception instanceof HttpException) {
 
-    // Sends the formatted JSON response with status code, request path, method, and message
-    response.status(status).json({
-      statusCode: status,
+      const status = exception.getStatus();
+      const resp = exception.getResponse();
+
+      // Format the response for http errors
+      return response.status(status).json({
+        statusCode: status,
+        path: request.url,
+        method: request.method,
+        message: resp,
+      });
+    }
+
+    // Handle custom DomainErrors and map them to appropriate HTTP status codes
+    if (exception instanceof DomainError) {
+      
+      // Map the domain error to an HTTP status code
+      const status = mapDomainErrorToStatus(exception);
+      
+      // Format the response for domain errors
+      return response.status(status).json({
+        statusCode: status,
+        path: request.url,
+        method: request.method,
+        message: exception.message,
+      });
+    }
+
+    // For all other unexpected errors, return a generic 500 Internal Server Error response
+    return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       path: request.url,
       method: request.method,
-      message,
+      message: 'Erro interno do servidor. Por favor, tente novamente mais tarde. Se o problema persistir, entre em contato com o suporte.',
     });
   }
+}
+
+// Function to map custom DomainErrors to appropriate HTTP status codes
+function mapDomainErrorToStatus(err: DomainError) {
+
+  if (err instanceof EntityNotFoundError) return HttpStatus.NOT_FOUND;
+  if (err instanceof InvalidEntityError) return HttpStatus.BAD_REQUEST;
+  if (err instanceof ConflictError) return HttpStatus.CONFLICT;
+
+  // Default to 400 Bad Request for other DomainErrors
+  return HttpStatus.BAD_REQUEST;
 }

@@ -26,20 +26,26 @@ export class UpdateAboutSectionUseCase {
 
         try {
 
-            if (!updateAboutSectionDto) {
+            if (!updateAboutSectionDto || Object.keys(updateAboutSectionDto).length === 0) {
              
-                throw new DomainError('Dados da seção são obrigatórios para atualização.');
+                throw new DomainError('Para atualizar, pelo menos um campo da seção deve ser preenchido.');
             }
 
             this.logger.log('Updating about section...');
 
-            // Validate the created about section DTO
-            const errors = await validate(updateAboutSectionDto);
+            // Validate the updated about section DTO
+            const errors = await validate(updateAboutSectionDto, { stopAtFirstError: true });
 
             // If there are validation errors, throw an error
             if (errors.length > 0) {
 
-                throw new DomainError(`${JSON.stringify(errors)}`);
+                // Extract all constraint messages from validation errors
+                // flatMap is used to flatten the array of arrays into a single array
+                const messages = errors.flatMap(
+                    err => Object.values(err.constraints || {}) // Get constraint messages or empty array
+                );
+
+                throw new DomainError(messages.join('; ')); // Join messages into a single string. Remember to properly format on frontend
             }
     
             // Update the about section in the repository
@@ -47,8 +53,10 @@ export class UpdateAboutSectionUseCase {
 
             if (!updatedAboutSection) {
 
+                console.log(updatedAboutSection);
+
                 this.logger.log('No section was updated.');
-                throw new Error('Nenhuma seção foi atualizada.');
+                throw new DomainError('Nenhuma seção foi atualizada.');
             }
 
             this.logger.log('Section successfully updated on database. Deleting the old section from cache...');
@@ -66,13 +74,15 @@ export class UpdateAboutSectionUseCase {
             return updatedAboutSection;
         } catch (err) {
 
+            console.log(err)
+
             // Log the error and rethrow a generic error message
-            this.logger.error('Error updating the about section:', err.message);
+            this.logger.error('Error updating the about section:', err);
 
             // If it's a known/domain/internal expected error, rethrow
             if (err instanceof DomainError) {
 
-                throw err.message;
+                throw err;
             }
 
             // Otherwise, it's unexpected -> generic error
