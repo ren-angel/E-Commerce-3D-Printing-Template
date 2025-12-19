@@ -1,12 +1,11 @@
 # name of the workflow shown in Actions UI
-name: CI/CD — Build & Push Backend+Frontend (staging)
+name: CI/CD — Build & Push Frontend (staging)
 
 # events that trigger the workflow
 on: 
   # trigger when commits are pushed or manually
   [push, workflow_dispatch]
       
-
 # permissions the workflow needs (scoped)
 permissions:
   contents: read    # allow reading repo contents
@@ -23,11 +22,11 @@ jobs:
 
     steps:
       # checkout repository code so actions can access it
-      - name: Checkout back-end branch
+      - name: Checkout front-end branch
         uses: actions/checkout@v4
         with:
-          # references back-end branch
-          ref: back-end
+          # references front-end branch
+          ref: front-end
 
       # set up QEMU to support multi-arch builds if needed
       - name: Set up QEMU
@@ -46,39 +45,19 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}    # token with packages: write permission
 
       # build and push backend image (tagged by commit and 'staging-latest')
-      - name: Build & Push Backend image
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/back-end'       # run only if pushed to back-end branch
+      - name: Build & Push Frontend image
+        if: github.event_name == 'workflow_dispatch' || github.ref_name == 'front-end'       # run only if pushed to front-end branch
         uses: docker/build-push-action@v5
         with:
-          context: .                                  # path to backend Docker context, which is the current branch
-          file: ./Dockerfile                 # Dockerfile path for backend
+          context: .                                  # path to frontend Docker context, which is the current branch
+          file: ./Dockerfile                          # Dockerfile path for frontend
           push: true                                  # push image after building
           # tagging image with an unique tag per commit and latest staging tag, respectively
           tags: |
-            ghcr.io/${{ github.repository_owner }}/backend:staging-${{ github.sha }}   
-            ghcr.io/${{ github.repository_owner }}/backend:staging-latest     
+            ghcr.io/${{ github.repository_owner }}/frontend:staging-${{ github.sha }}   
+            ghcr.io/${{ github.repository_owner }}/frontend:staging-latest     
           cache-from: type=gha                        # use GitHub Actions cache as build cache source
           cache-to: type=gha,mode=max                 # store cache to GitHub Actions cache
-
-      # - name: Checkout front-end branch
-       # uses: actions/checkout@v4
-        # with:
-          # references front-end branch
-          # ref: front-end
-
-      # build and push frontend image (tagged similarly)
-      # - name: Build & Push Frontend image
-        # if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/front-end'       # run only if pushed to front-end branch
-        # uses: docker/build-push-action@v5
-        # with:
-          # context: .                                  # path to frontend Docker context, which is the current branch
-          # file: ./Dockerfile                 # Dockerfile path for frontend
-          # push: true
-          # tags: |
-            # ghcr.io/${{ github.repository_owner }}/frontend:staging-${{ github.sha }}
-            # ghcr.io/${{ github.repository_owner }}/frontend:staging-latest             
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
 
       # optional: store the image names+tags as outputs for other jobs (useful if you expand)
       #- name: Set output image names
@@ -89,18 +68,10 @@ jobs:
          # GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
           #GITHUB_SHA: ${{ github.sha }}
 
-      # tell Render to redeploy backend service
-      - name: Trigger Render Backend Deploy
-        # Send a POST request to the Render backend deployment webhook to trigger a redeployment
-        # If the request fails, the workflow will fail due to the '--fail' flag
-        run: |
-          curl -X POST "${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}" \
-            --fail
-
       # tell Render to redeploy frontend service
-      # - name: Trigger Render Frontend Deploy
+      - name: Trigger Render Frontend Deploy
         # Send a POST request to the Render frontend deployment webhook to trigger a redeployment
         # If the request fails, the workflow will fail due to the '--fail' flag
-        # run: |
-          # curl -X POST "${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}" \
-            # --fail
+        run: |
+          curl -X POST "${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}" \
+            --fail
