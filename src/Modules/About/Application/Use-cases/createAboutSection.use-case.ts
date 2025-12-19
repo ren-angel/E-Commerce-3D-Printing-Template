@@ -4,7 +4,7 @@ import { CacheService } from "src/Modules/Shared/cache.service";
 import { AboutRepositoryInterface } from "../../Domain/Repositories/about.repository.interface";
 import { CreateAboutSectionDto } from "../../Interfaces/DTOs/create-about-section.dto";
 import { AboutDto } from "../DTO/about.dto";
-import { DomainError } from "src/Modules/Shared/custom-errors.exception";
+import { EntityNotFoundError, DomainError, InvalidEntityError, InfrastructureError } from "src/Modules/Shared/custom-errors.exception";
 
 // Use case for creating an about section
 @Injectable()
@@ -29,10 +29,10 @@ export class CreateAboutSectionUseCase {
 
             if (!createAboutSectionDto || Object.keys(createAboutSectionDto).length === 0) {
              
-                throw new DomainError('Dados da seção são obrigatórios para criação.');
+                throw new InvalidEntityError('Dados da seção são obrigatórios para criação.');
             }
 
-            this.logger.log('Creating about section...');
+            this.logger.log('Validating about section...');
 
             // Validate the created about section DTO
             const errors = await validate(createAboutSectionDto, { stopAtFirstError: true });
@@ -46,8 +46,10 @@ export class CreateAboutSectionUseCase {
                     err => Object.values(err.constraints || {}) // Get constraint messages or empty array
                 );
 
-                throw new DomainError(messages.join('; ')); // Join messages into a single string. Remember to properly format on frontend
-            }
+                throw new InvalidEntityError(messages.join('; ')); // Join messages into a single string. Remember to properly format on frontend
+            }            
+            
+            this.logger.log('Creating about section...');
     
             // Create the about section in the repository
             const newAboutSection = await this.aboutRepository.create(createAboutSectionDto);
@@ -55,7 +57,7 @@ export class CreateAboutSectionUseCase {
             if (!newAboutSection) {
 
                 this.logger.log('No section was created.');
-                throw new DomainError('Nenhuma seção foi criada.');
+                throw new EntityNotFoundError('Nenhuma seção foi criada.');
             }
 
             this.logger.log('Section successfully created on database. Appending the result onto its appropriate cache list...');
@@ -83,7 +85,7 @@ export class CreateAboutSectionUseCase {
             }
 
             // Otherwise, it's unexpected -> generic error
-            throw new Error('Erro ao criar a seção.');
+            throw new InfrastructureError('Erro ao criar a seção.');
         }
     }
 }

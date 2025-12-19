@@ -1,0 +1,76 @@
+import { Inject, Injectable, Logger } from "@nestjs/common";
+import { CacheService } from "src/Modules/Shared/cache.service";
+import { AboutRepositoryInterface } from "../../Domain/Repositories/about.repository.interface";
+import { DomainError, InfrastructureError, InvalidEntityError } from "src/Modules/Shared/custom-errors.exception";
+import { AboutDto } from "../DTO/about.dto";
+
+// Use case for updating an about section's position
+@Injectable()
+export class UpdateAboutSectionPositionUseCase {
+
+    // Injecting the About repository, Cache service and Logger using dependency injection for the use case to interact with the data layer, caching layer and log important information or errors
+    constructor(
+        @Inject('AboutRepositoryInterface')
+        private readonly aboutRepository: AboutRepositoryInterface,
+        private readonly cacheService: CacheService,
+        private readonly logger: Logger,
+    ) {}
+
+    // Method to execute the use case, taking the section ID and a it's new position as input, deleting the outdated section and caching the updated one
+    async execute(aboutId: number, newPosition: number): Promise<boolean> {
+
+        const sectionKey = 'about-section';
+        const sectionTtl = (60000 * 60) * 24; // 24 hours in milliseconds
+
+        try {
+
+            if (!aboutId) {
+             
+                throw new InvalidEntityError('ID da seção é obrigatório para atualização de posição.');
+            }
+
+            if (newPosition === undefined || newPosition === null || isNaN(newPosition) || newPosition < 0) {
+
+                throw new InvalidEntityError('Nova posição da seção é obrigatória e deve ser um número válido maior ou igual a zero.');
+            }
+            
+            this.logger.log('Updating section position...');
+
+            // Update the about section in the repository
+            const updatedAboutSectionPosition = await this.aboutRepository.updateSectionPosition(aboutId, newPosition);
+
+            if (!updatedAboutSectionPosition) {
+
+                this.logger.log('Section position didn\'t change.');
+                return false;
+            }
+
+            this.logger.log('Section position successfully changed on database. Deleting the old section from cache...');
+
+            // Deleting the old cached section
+            await this.cacheService.del(`${sectionKey}:${aboutId}`);
+
+            this.logger.log('Old section deleted from cache. Caching the updated section...');
+
+            // Caching updated section
+            await this.cacheService.set<AboutDto>(`${sectionKey}:${aboutId}`, updatedAboutSectionPosition, sectionTtl);
+    
+            this.logger.log('About section cached successfully');
+            
+            return true;
+        } catch (err) {
+
+            // Log the error and rethrow a generic error message
+            this.logger.error('Error updating the about section:', err);
+
+            // If it's a known/domain/internal expected error, rethrow
+            if (err instanceof DomainError) {
+
+                throw err;
+            }
+
+            // Otherwise, it's unexpected -> generic error
+            throw new InfrastructureError('Erro ao atualizar a seção.');
+        }
+    }
+}

@@ -4,7 +4,7 @@ import { CacheService } from "src/Modules/Shared/cache.service";
 import { AboutRepositoryInterface } from "../../Domain/Repositories/about.repository.interface";
 import { UpdateAboutSectionDto } from "../../Interfaces/DTOs/update-about-section.dto";
 import { AboutDto } from "../DTO/about.dto";
-import { DomainError } from "src/Modules/Shared/custom-errors.exception";
+import { ConflictError, DomainError, EntityNotFoundError, InfrastructureError, InvalidEntityError } from "src/Modules/Shared/custom-errors.exception";
 
 // Use case for updating an about section
 @Injectable()
@@ -28,10 +28,10 @@ export class UpdateAboutSectionUseCase {
 
             if (!updateAboutSectionDto || Object.keys(updateAboutSectionDto).length === 0) {
              
-                throw new DomainError('Para atualizar, pelo menos um campo da seção deve ser preenchido.');
+                throw new InvalidEntityError('Para atualizar, pelo menos um campo da seção deve ser preenchido.');
             }
 
-            this.logger.log('Updating about section...');
+            this.logger.log('Validating about section...');
 
             // Validate the updated about section DTO
             const errors = await validate(updateAboutSectionDto, { stopAtFirstError: true });
@@ -45,9 +45,11 @@ export class UpdateAboutSectionUseCase {
                     err => Object.values(err.constraints || {}) // Get constraint messages or empty array
                 );
 
-                throw new DomainError(messages.join('; ')); // Join messages into a single string. Remember to properly format on frontend
+                throw new InvalidEntityError(messages.join('; ')); // Join messages into a single string. Remember to properly format on frontend
             }
-    
+            
+            this.logger.log('Updating about section...');
+
             // Update the about section in the repository
             const updatedAboutSection = await this.aboutRepository.update(aboutId, updateAboutSectionDto);
 
@@ -56,7 +58,7 @@ export class UpdateAboutSectionUseCase {
                 console.log(updatedAboutSection);
 
                 this.logger.log('No section was updated.');
-                throw new DomainError('Nenhuma seção foi atualizada.');
+                throw new EntityNotFoundError('Nenhuma seção foi atualizada.');
             }
 
             this.logger.log('Section successfully updated on database. Deleting the old section from cache...');
@@ -74,8 +76,6 @@ export class UpdateAboutSectionUseCase {
             return updatedAboutSection;
         } catch (err) {
 
-            console.log(err)
-
             // Log the error and rethrow a generic error message
             this.logger.error('Error updating the about section:', err);
 
@@ -86,7 +86,7 @@ export class UpdateAboutSectionUseCase {
             }
 
             // Otherwise, it's unexpected -> generic error
-            throw new Error('Erro ao atualizar a seção.');
+            throw new InfrastructureError('Erro ao atualizar a seção.');
         }
     }
 }

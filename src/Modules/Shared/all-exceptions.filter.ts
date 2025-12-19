@@ -1,5 +1,5 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
-import { DomainError, EntityNotFoundError, InvalidEntityError, ConflictError } from '../Shared/custom-errors.exception';
+import { DomainError, EntityNotFoundError, InvalidEntityError, ConflictError, UnauthorizedError, ForbiddenError, InfrastructureError } from '../Shared/custom-errors.exception';
 
 // Global exception filter to handle all exceptions thrown in the application
 @Catch()
@@ -60,6 +60,9 @@ function mapDomainErrorToStatus(err: DomainError) {
   if (err instanceof EntityNotFoundError) return HttpStatus.NOT_FOUND;
   if (err instanceof InvalidEntityError) return HttpStatus.BAD_REQUEST;
   if (err instanceof ConflictError) return HttpStatus.CONFLICT;
+  if (err instanceof UnauthorizedError) return HttpStatus.UNAUTHORIZED;
+  if (err instanceof ForbiddenError) return HttpStatus.FORBIDDEN;
+  if (err instanceof InfrastructureError) return HttpStatus.SERVICE_UNAVAILABLE;
 
   // Default to 400 Bad Request for other DomainErrors
   return HttpStatus.BAD_REQUEST;

@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { CacheService } from "src/Modules/Shared/cache.service";
 import { AboutRepositoryInterface } from "../../Domain/Repositories/about.repository.interface";
 import { AboutDto } from "../DTO/about.dto";
+import { InfrastructureError } from "src/Modules/Shared/custom-errors.exception";
 
 @Injectable()
 export class FindOneAboutSectionsUseCase {
@@ -63,7 +64,7 @@ export class FindOneAboutSectionsUseCase {
 
             // Log the error and rethrow a generic error message
             this.logger.error('Error fetching about section:', err.message);
-            throw new Error('Erro ao obter a seção de "Sobre nós".');
+            throw new InfrastructureError('Erro ao obter a seção de "Sobre nós".');
         }
     }
 }

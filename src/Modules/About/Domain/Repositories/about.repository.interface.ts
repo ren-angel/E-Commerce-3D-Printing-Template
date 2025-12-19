@@ -10,6 +10,9 @@ export interface AboutRepositoryInterface {
     // Method for retrieving the IDs of all About sections, returning a Promise that resolves to an array of numbers
     findAllIds(): Promise<number[]>;
 
+    // Method for retrieving all currently used section positions, returning a Promise that resolves to an array of numbers
+    // findAllSectionPositions(): Promise<number[]>;
+
     // Method for retrieving all About sections using the provided DTO, returning a Promise that resolves to an array of AboutDto or null if none exist
     findById(ids: number[]): Promise<AboutDto[] | null>;
 
@@ -22,6 +25,9 @@ export interface AboutRepositoryInterface {
     // Method for updating an existing About section identified by its ID using the provided DTO, returning a Promise that resolves to an UpdateResult or null if the update fails
     update(aboutId: number, updateAboutSectionDto: UpdateAboutSectionDto): Promise<AboutDto | null>;
 
+    // Method for updating the section position of an About section identified by its ID, returning a Promise that resolves to an UpdateResult or null if the update fails
+    updateSectionPosition(aboutId: number, newPosition: number): Promise<AboutDto | null>;
+
     // Method for deleting an About section by its ID, returning a Promise that resolves to a DeleteResult or null if the deletion fails
-    remove(aboutId: number): Promise<DeleteResult | null>;
+    remove(aboutId: number): Promise<boolean>;
 }

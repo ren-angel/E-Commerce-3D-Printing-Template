@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { CacheService } from "src/Modules/Shared/cache.service";
 import { AboutRepositoryInterface } from "../../Domain/Repositories/about.repository.interface";
 import { DeleteResult } from "typeorm";
-import { DomainError } from "src/Modules/Shared/custom-errors.exception";
+import { DomainError, EntityNotFoundError, InfrastructureError, InvalidEntityError } from "src/Modules/Shared/custom-errors.exception";
 
 // Use case for deleting an about section
 @Injectable()
@@ -26,7 +26,7 @@ export class DeleteAboutSectionUseCase {
 
             if (!aboutId) {
              
-                throw new DomainError('ID da seção é obrigatório para remoção.');
+                throw new InvalidEntityError('ID da seção é obrigatório para remoção.');
             }
 
             this.logger.log('Deleting about section from the database...');
@@ -37,7 +37,7 @@ export class DeleteAboutSectionUseCase {
             if (!deleted) {
 
                 this.logger.log('No section was deleted.');
-                throw new DomainError('Nenhuma seção foi removida.');
+                throw new EntityNotFoundError('Nenhuma seção foi removida.');
             }
             
             this.logger.log('Section successfully deleted from the database. Deleting the section from the cache...');
@@ -65,7 +65,7 @@ export class DeleteAboutSectionUseCase {
             }
 
             // Otherwise, it's unexpected -> generic error
-            throw new Error('Erro ao remover a seção.');
+            throw new InfrastructureError('Erro ao remover a seção.');
         }
     }
 }

@@ -2,6 +2,7 @@ import { Inject, Injectable, Logger } from "@nestjs/common";
 import { CacheService } from "src/Modules/Shared/cache.service";
 import { AboutRepositoryInterface } from "../../Domain/Repositories/about.repository.interface";
 import { AboutDto } from "../DTO/about.dto";
+import { InfrastructureError } from "src/Modules/Shared/custom-errors.exception";
 
 @Injectable()
 export class FindAllAboutSectionsUseCase {
@@ -23,16 +24,18 @@ export class FindAllAboutSectionsUseCase {
 
         try {
 
-            this.logger.log('Fetching all about sections IDs from cache...');
+            // this.logger.log('Fetching all about sections IDs from cache...');
         
             // Getting the cached IDs
             const rawAboutSectionsIds = await this.cacheService.lrange(listKey); // returns strings
             let aboutSectionsIds = rawAboutSectionsIds.map(id => Number(id)); // convert to numbers
 
+            console.log("aboutSectionsIds ", aboutSectionsIds);
+
             // if couldn't find any cached IDs, then fetch IDs from the repository and cache them
             if (!aboutSectionsIds || aboutSectionsIds.length === 0) {
 
-                this.logger.log('About sections IDs not found in cache. Fetching from repository...');
+                // this.logger.log('About sections IDs not found in cache. Fetching from repository...');
 
                 // First, acquire a lock to prevent cache stampede
                 aboutSectionsIds = await this.cacheService.withLock(
@@ -43,17 +46,19 @@ export class FindAllAboutSectionsUseCase {
 
                         if (ids.length > 0) {
 
-                            this.logger.log('Sections IDs fetched successfully. Caching the result...');
+                            // this.logger.log('Sections IDs fetched successfully. Caching the result...');
 
                             // Rebuilds the cache list with the fetched IDs
                             await this.cacheService.del(listKey)
                             await this.cacheService.rpush<number[]>(listKey, ids, sectionTtl);
 
-                            this.logger.log('Sections IDs cached successfully.');
+                            console.log("ids ", ids);
+
+                            // this.logger.log('Sections IDs cached successfully.');
                         } else {
 
                             // If no IDs are found, return null
-                            this.logger.log('No about sections found in repository.');
+                            // this.logger.log('No about sections found in repository.');
                             return null;
                         }
 
@@ -62,13 +67,15 @@ export class FindAllAboutSectionsUseCase {
                 );
             }
 
-            this.logger.log('Fetching all about sections from cache...');
+            // this.logger.log('Fetching all about sections from cache...');
 
             // Creating keys for each section based on their IDs
             const keys = aboutSectionsIds.map(id => `${sectionKey}:${id}`);
 
             // Attempt to fetch all sections from cache using mget for efficiency
             const cachedArr = await this.cacheService.mget<AboutDto | null>(keys);
+
+            console.log("cachedArr ", cachedArr);
 
             // Check if all sections were found in cache by filtering out any null values
             const missesIndexes = [];
@@ -77,37 +84,36 @@ export class FindAllAboutSectionsUseCase {
                 if (cachedArr[i] == null) missesIndexes.push(i);
             }
 
+            console.log("missesIndexes ", missesIndexes);
+
             // If all sections are found in cache, return them as an array of AboutDto
             if (missesIndexes.length === 0) {
                 
-                this.logger.log('About sections fetched from cache successfully.');
+                // this.logger.log('About sections fetched from cache successfully.');
 
                 return cachedArr as AboutDto[];
             }
 
-            this.logger.log('Cache miss (partial/full). Fetching missing about sections from repository...');
+            // this.logger.log('Cache miss (partial/full). Fetching missing about sections from repository...');
 
             // Fetch all the missing about sections from the repository and cache each section individually
             // Translates the missing indexes into the corresponding IDs from aboutSectionsIds
             const missedIds = missesIndexes.map(i => aboutSectionsIds[i]);
             
             // Fetching missing sections from the repository
+            // No lock here to avoid deadlocks, as the outer lock should be sufficient
             const missingSections = await this.aboutRepository.findById(missedIds);
-            // Once again, use a lock to prevent cache stampede
-            // const missingSections = await this.cacheService.withLock(
-            //     `read:${listKey}:fetch`,
-            //     lockTtl,
-            //     async () => this.aboutRepository.findById(missedIds)
-            // )
+
+            console.log("missingSections ", missingSections);
 
             // If no sections are found, return null
             if (!missingSections || missingSections.length === 0) {
 
-                this.logger.log('No about sections found in repository.');
+                // this.logger.log('No about sections found in repository.');
                 return null;
             }
 
-            this.logger.log('About sections fetched successfully. Caching the result...');
+            // this.logger.log('About sections fetched successfully. Caching the result...');
 
             // Creating the payload for setting multiple values in the cache, mapping through each section
             const msetPayload = missingSections.map(section => ({
@@ -127,7 +133,9 @@ export class FindAllAboutSectionsUseCase {
                 return cachedArr[index] ?? missingMap.get(id.toString())!; // ! = non-null assertion because we know it exists
             });
 
-            this.logger.log('About sections cached successfully.');
+            console.log("result ", result)
+
+            // this.logger.log('About sections cached successfully.');
 
             return result;
 
@@ -147,7 +155,7 @@ export class FindAllAboutSectionsUseCase {
             //         } catch (err) {
 
             //             // Log the error but continue caching other sections
-            //             this.logger.error(`Error caching about section with ID ${section.aboutId}:`, err);
+            //             // this.logger.error(`Error caching about section with ID ${section.aboutId}:`, err);
             //         }
             //     })
             // );
@@ -159,8 +167,8 @@ export class FindAllAboutSectionsUseCase {
         } catch (err) {
 
             // Log the error and rethrow a generic error message
-            this.logger.error('Error fetching about sections:', err.message);
-            throw new Error('Erro ao obter as seções "Sobre nós".');
+            // this.logger.error('Error fetching about sections:', err.message);
+            throw new InfrastructureError('Erro ao obter as seções "Sobre nós".');
         }
     }
 }

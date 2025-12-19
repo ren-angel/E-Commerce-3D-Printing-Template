@@ -13,3 +13,6 @@ export class DomainError extends Error {
 export class EntityNotFoundError extends DomainError {} // Error for when an entity is not found
 export class InvalidEntityError extends DomainError {} // Error for when an entity is invalid, aka validation errors
 export class ConflictError extends DomainError {} // Error for when there is a conflict, e.g., duplicate entries
+export class UnauthorizedError extends DomainError {} // Error for unauthorized access attempts
+export class ForbiddenError extends DomainError {} // Error for forbidden actions due to insufficient permissions
+export class InfrastructureError extends DomainError {} // Error for infrastructure-related issues, e.g., database connection failures

@@ -13,7 +13,7 @@ export class AboutEntity {
   section: string;
 
   // Section position column of integer type with default value of 0 (initial position)
-  @Column({ name: 'section_position', type: 'int', default: 0 })
+  @Column({ name: 'section_position', type: 'int', unique: true, default: 0 })
   sectionPosition: number;
 
   // Content text column of text type and not nullable
