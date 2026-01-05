@@ -54,16 +54,31 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
         // Using a transaction to calculate and set the correct section position atomically
         const newAboutSectionDto = await this.aboutRepository.manager.transaction<AboutDto>(async transactionalEntityManager => {
         
-            const { maxPosition } = await transactionalEntityManager
-            .createQueryBuilder()                                          // Using QueryBuilder to perform a raw SQL query
-            .select('COALESCE(MAX(t.section_position), 0)', 'maxPosition') // COALESCE returns the first non-null value, ensuring maxPosition is 0 if no sections exist
-            .from(AboutEntity, 't')                                        // 't' is an alias for the AboutEntity table
-            .getRawOne();                                                  // Execute the query and get the raw result
+            // setting the new section's position to the end of the list
+            // const { maxPosition } = await transactionalEntityManager
+            // .createQueryBuilder()                                          // Using QueryBuilder to perform a raw SQL query
+            // .select('COALESCE(MAX(t.section_position), 0)', 'maxPosition') // COALESCE returns the first non-null value, ensuring maxPosition is 0 if no sections exist
+            // .from(AboutEntity, 't')                                        // 't' is an alias for the AboutEntity table
+            // .getRawOne();                                                  // Execute the query and get the raw result
 
-            const newAboutSection = await transactionalEntityManager.save({
-                ...createAboutSectionDto,
-                sectionPosition: Number(maxPosition) + 1,                  // Set the new section's position to one more than the current maximum
-            });
+            // const newAboutSection = await transactionalEntityManager.save({
+            //     ...createAboutSectionDto,
+            //     sectionPosition: Number(maxPosition) + 1,                  // Set the new section's position to one more than the current maximum
+            // });
+
+            // return plainToInstance(AboutDto, newAboutSection);
+
+
+
+            // setting the new section's position to the start of the list and increment +1 to all others positions
+
+            // Increment positions of all existing sections to make space at position 1
+            await transactionalEntityManager.query(
+                `UPDATE about SET section_position = section_position + 1`
+            );
+
+            // Now save the new section at position 1 (aka default position in db)
+            const newAboutSection = await transactionalEntityManager.save(createAboutSectionDto);
 
             return plainToInstance(AboutDto, newAboutSection);
         });
