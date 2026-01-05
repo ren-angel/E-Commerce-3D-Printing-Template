@@ -1,5 +1,5 @@
 # name of the workflow shown in Actions UI
-name: CI/CD — Build & Push Backend+Frontend (staging)
+name: CI/CD — Build & Push Backend (staging)
 
 # events that trigger the workflow
 on: 
@@ -47,7 +47,7 @@ jobs:
 
       # build and push backend image (tagged by commit and 'staging-latest')
       - name: Build & Push Backend image
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/back-end'       # run only if pushed to back-end branch
+        if: github.event_name == 'workflow_dispatch' || github.ref_name == 'back-end'       # run only if pushed to back-end branch
         uses: docker/build-push-action@v5
         with:
           context: .                                  # path to backend Docker context, which is the current branch
@@ -59,26 +59,6 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/backend:staging-latest     
           cache-from: type=gha                        # use GitHub Actions cache as build cache source
           cache-to: type=gha,mode=max                 # store cache to GitHub Actions cache
-
-      # - name: Checkout front-end branch
-       # uses: actions/checkout@v4
-        # with:
-          # references front-end branch
-          # ref: front-end
-
-      # build and push frontend image (tagged similarly)
-      # - name: Build & Push Frontend image
-        # if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/front-end'       # run only if pushed to front-end branch
-        # uses: docker/build-push-action@v5
-        # with:
-          # context: .                                  # path to frontend Docker context, which is the current branch
-          # file: ./Dockerfile                 # Dockerfile path for frontend
-          # push: true
-          # tags: |
-            # ghcr.io/${{ github.repository_owner }}/frontend:staging-${{ github.sha }}
-            # ghcr.io/${{ github.repository_owner }}/frontend:staging-latest             
-          # cache-from: type=gha
-          # cache-to: type=gha,mode=max
 
       # optional: store the image names+tags as outputs for other jobs (useful if you expand)
       #- name: Set output image names
@@ -96,11 +76,3 @@ jobs:
         run: |
           curl -X POST "${{ secrets.RENDER_BACKEND_DEPLOY_HOOK }}" \
             --fail
-
-      # tell Render to redeploy frontend service
-      # - name: Trigger Render Frontend Deploy
-        # Send a POST request to the Render frontend deployment webhook to trigger a redeployment
-        # If the request fails, the workflow will fail due to the '--fail' flag
-        # run: |
-          # curl -X POST "${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK }}" \
-            # --fail
