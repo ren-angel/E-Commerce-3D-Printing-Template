@@ -29,5 +29,5 @@ export interface AboutRepositoryInterface {
     updateSectionPosition(aboutId: number, newPosition: number): Promise<AboutDto | null>;
 
     // Method for deleting an About section by its ID, returning a Promise that resolves to a DeleteResult or null if the deletion fails
-    remove(aboutId: number): Promise<boolean>;
+    remove(aboutId: number): Promise<DeleteResult | null>;
 }

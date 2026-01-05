@@ -137,7 +137,7 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
     }
 
     // Method to remove an about section by its ID
-    async remove(aboutId: number): Promise<boolean> {
+    async remove(aboutId: number): Promise<DeleteResult> {
 
         let deleteResult: DeleteResult;
 
@@ -149,9 +149,7 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
             // If the section doesn't exist, set affected rows to 0 and exit
             if (!section) {
 
-                deleteResult = new DeleteResult();
-                deleteResult.affected = 0;
-                return false;
+                return null;
             }
 
             const position = section.sectionPosition;
@@ -165,6 +163,6 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
             );
         });
 
-        return deleteResult.affected! > 0; // ! = non-null assertion because we know it exists
+        return deleteResult!; // ! = non-null assertion because we know it exists
     }
 }
