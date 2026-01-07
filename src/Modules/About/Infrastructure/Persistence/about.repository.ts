@@ -78,7 +78,7 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
             );
 
             // Now save the new section at position 1 (aka default position in db)
-            const newAboutSection = await transactionalEntityManager.save(createAboutSectionDto);
+            const newAboutSection = await transactionalEntityManager.save(AboutEntity, createAboutSectionDto);
 
             return plainToInstance(AboutDto, newAboutSection);
         });
