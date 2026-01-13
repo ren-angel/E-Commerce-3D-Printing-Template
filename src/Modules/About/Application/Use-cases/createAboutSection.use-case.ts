@@ -77,13 +77,8 @@ export class CreateAboutSectionUseCase {
 
             // Appending the result to cache list with rpush to avoid multiple inserts overwriting each other
             await this.cacheService.rpush<string>(listKey, newAboutSection.aboutId, sectionTtl)
-
-            // this.logger.log('Caching the new section...');
-
-            // Caching newly created section
-            // await this.cacheService.set<AboutDto>(`${sectionKey}:${newAboutSection.aboutId}`, newAboutSection, sectionTtl);
     
-            this.logger.log('About section list cached successfully');
+            this.logger.log('About section list cached successfully.');
 
             return newAboutSection;
         } catch (err) {

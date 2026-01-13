@@ -19,8 +19,8 @@ export class UpdateAboutSectionPositionUseCase {
     // Method to execute the use case, taking the section ID and a it's new position as input, deleting the outdated section and caching the updated one
     async execute(aboutId: number, newPosition: number): Promise<boolean> {
 
+        const listKey = 'about-sections:list';
         const sectionKey = 'about-section';
-        const sectionTtl = (60000 * 60) * 24; // 24 hours in milliseconds
 
         try {
 
@@ -45,18 +45,21 @@ export class UpdateAboutSectionPositionUseCase {
                 return false;
             }
 
-            this.logger.log('Section position successfully changed on database. Deleting the old section from cache...');
+            this.logger.log('Section position successfully changed on database. Deleting the old cache...');
 
-            // Deleting the old cached section
-            await this.cacheService.del(`${sectionKey}:${aboutId}`);
-
-            this.logger.log('Old section deleted from cache. Caching the updated section...');
-
-            // Caching updated section
-            await this.cacheService.set<AboutDto>(`${sectionKey}:${aboutId}`, updatedAboutSectionPosition, sectionTtl);
-    
-            this.logger.log('About section cached successfully');
+            // Deleting the stale cache of the about sections for consistency
+            const rawAboutSectionsIds = await this.cacheService.lrange(listKey); // returns strings. so convert to numbers later
             
+            if (rawAboutSectionsIds && rawAboutSectionsIds.length > 0) {
+
+                const aboutSectionsIds = rawAboutSectionsIds.map(id => Number(id));
+                const keysToDelete = aboutSectionsIds.map(id => `${sectionKey}:${id}`);
+
+                await this.cacheService.mdel(keysToDelete);
+            }
+
+            this.logger.log('Stale sections cache deleted successfully.');
+
             return true;
         } catch (err) {
 

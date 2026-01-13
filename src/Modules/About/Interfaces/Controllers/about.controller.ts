@@ -6,6 +6,7 @@ import { FindAllAboutSectionsUseCase } from '../../Application/Use-cases/findAll
 import { FindOneAboutSectionsUseCase } from '../../Application/Use-cases/findOneAboutSections.use-case';
 import { CreateAboutSectionUseCase } from '../../Application/Use-cases/createAboutSection.use-case';
 import { UpdateAboutSectionUseCase } from '../../Application/Use-cases/updateAboutSection.use-case';
+import { UpdateAboutSectionPositionUseCase } from '../../Application/Use-cases/updateAboutSectionPosition.use-case';
 import { DeleteAboutSectionUseCase } from '../../Application/Use-cases/deleteAboutSection.use-case';
 import { seconds, Throttle } from '@nestjs/throttler';
 
@@ -21,6 +22,7 @@ export class AboutController {
     private readonly findOneAboutSectionsUseCase: FindOneAboutSectionsUseCase,
     private readonly createAboutSectionUseCase: CreateAboutSectionUseCase,
     private readonly updateAboutSectionUseCase: UpdateAboutSectionUseCase,
+    private readonly updateAboutSectionPositionUseCase: UpdateAboutSectionPositionUseCase,
     private readonly deleteAboutSectionUseCase: DeleteAboutSectionUseCase,
   ) {}
 
@@ -52,6 +54,14 @@ export class AboutController {
 
     // + operator to convert string to number
     return this.updateAboutSectionUseCase.execute(+aboutId, updateAboutSectionDto);
+  }
+
+  // Endpoint to update the position of an about section by its ID
+  @Put('position/:aboutId')
+  updatePosition(@Param('aboutId') aboutId: string, @Body() newPosition: number) {
+
+    // + operator to convert string to number
+    return this.updateAboutSectionPositionUseCase.execute(+aboutId, newPosition);
   }
 
   // Endpoint to delete an about section by its ID

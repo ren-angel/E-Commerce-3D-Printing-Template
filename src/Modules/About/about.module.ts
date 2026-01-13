@@ -7,6 +7,7 @@ import { FindAllAboutSectionsUseCase } from './Application/Use-cases/findAllAbou
 import { FindOneAboutSectionsUseCase } from './Application/Use-cases/findOneAboutSections.use-case';
 import { CreateAboutSectionUseCase } from './Application/Use-cases/createAboutSection.use-case';
 import { UpdateAboutSectionUseCase } from './Application/Use-cases/updateAboutSection.use-case';
+import { UpdateAboutSectionPositionUseCase } from './Application/Use-cases/updateAboutSectionPosition.use-case';
 import { DeleteAboutSectionUseCase } from './Application/Use-cases/deleteAboutSection.use-case';
 import { AboutRepositoryInterface } from './Domain/Repositories/about.repository.interface';
 import { TypeOrmAboutRepository } from './Infrastructure/Persistence/about.repository';
@@ -26,6 +27,7 @@ import { TypeOrmAboutRepository } from './Infrastructure/Persistence/about.repos
     FindOneAboutSectionsUseCase,
     CreateAboutSectionUseCase,
     UpdateAboutSectionUseCase,
+    UpdateAboutSectionPositionUseCase,
     DeleteAboutSectionUseCase,
   ],
   controllers: [AboutController], // Registering the AboutController to handle incoming HTTP requests
