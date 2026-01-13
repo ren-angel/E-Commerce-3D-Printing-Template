@@ -83,7 +83,7 @@ export class CreateAboutSectionUseCase {
             // Caching newly created section
             // await this.cacheService.set<AboutDto>(`${sectionKey}:${newAboutSection.aboutId}`, newAboutSection, sectionTtl);
     
-            this.logger.log('About section cached successfully');
+            this.logger.log('About section list cached successfully');
 
             return newAboutSection;
         } catch (err) {
