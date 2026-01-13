@@ -78,11 +78,15 @@ export class CacheService {
     // Method to retrieve a value from the cache by its key, returning a Promise that resolves to the value of type T (T means generic type) or undefined if the key does not exist
     async get<T>(key: string): Promise<T | undefined> {
 
+        if (!key) return undefined;
+
         return this.cache.get<T>(key);
     }
 
     // Method to retrieve multiple values from the cache by their key, returning a Promise that resolves to the value of type T or undefined if the key does not exist
     async mget<T>(keys: string[]): Promise<(T | undefined)[]> {
+
+        if (keys.length === 0) return [];
 
         return this.cache.mget<T>(keys);
     }
@@ -95,6 +99,8 @@ export class CacheService {
 
     // Method to set a value in the cache with a specified key and TTL (time-to-live) in milliseconds, returning a Promise that resolves when the value is set
     async set<T>(key: string, value: T, ttl: number): Promise<void> {
+
+        if (!key || value === undefined || value === null) return;
 
         // Double check if the value is already in the cache to avoid unnecessary writes
         const cacheExists = await this.cache.get<T>(key);
@@ -110,6 +116,8 @@ export class CacheService {
 
     // Method to set multiple values in the cache with their respective keys and a common TTL (time-to-live) in milliseconds, returning a Promise that resolves when all values are set
     async mset<T>(payload: Array<{ key: string; value: T }>, ttl: number): Promise<void> {
+
+        if (payload.length === 0) return;
 
         // Extract keys to check for their existence in the cache
         const keys = payload.map(item => item.key);
@@ -146,6 +154,8 @@ export class CacheService {
     // Method to set/append a value to a list in the cache with a specified key and setting the list's TTL (time-to-live) in milliseconds, returning a Promise that resolves when the stringfied value is set
     async rpush<T>(listKey: string, value: T, ttl: number): Promise<void> {
 
+        if (!listKey || value === undefined || value === null) return;
+
         // Add up to 60 milliseconds of random jitter to the TTL
         const jitter = Math.floor(Math.random() * 60);
         ttl += jitter;
@@ -163,7 +173,17 @@ export class CacheService {
     // Method to delete a value from the cache by its key, returning a Promise that resolves when the key is deleted
     async del(key: string): Promise<void> {
 
+        if (!key) return;
+
         await this.cache.del(key);
+    }
+
+    // Method to delete multiple values from the cache by their keys, returning a Promise that resolves when the keys are deleted
+    async mdel(keys: string[]): Promise<void> {
+
+        if (keys.length === 0) return;
+
+        await this.cache.mdel(keys);
     }
 
     // Method to remove elements from a list in the cache by its key, returning a Promise that resolves when the elements are removed

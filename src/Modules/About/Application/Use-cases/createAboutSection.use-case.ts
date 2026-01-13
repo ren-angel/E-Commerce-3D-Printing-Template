@@ -60,15 +60,28 @@ export class CreateAboutSectionUseCase {
                 throw new EntityNotFoundError('Nenhuma seção foi criada.');
             }
 
-            this.logger.log('Section successfully created on database. Appending the result onto its appropriate cache list...');
+            this.logger.log('Section successfully created on database. Removing previously created sections from the cache...');
+
+            // Gets previously cached sections and remove them to maintain cache consistency
+            const rawAboutSectionsIds = await this.cacheService.lrange(listKey); // returns strings. so convert to numbers later
+            
+            if (rawAboutSectionsIds && rawAboutSectionsIds.length > 0) {
+
+                const aboutSectionsIds = rawAboutSectionsIds.map(id => Number(id));
+                const keysToDelete = aboutSectionsIds.map(id => `${sectionKey}:${id}`);
+
+                await this.cacheService.mdel(keysToDelete);
+            }
+
+            this.logger.log('Stale cache deleted. Appending the new ID onto its appropriate cache list...');
 
             // Appending the result to cache list with rpush to avoid multiple inserts overwriting each other
             await this.cacheService.rpush<string>(listKey, newAboutSection.aboutId, sectionTtl)
 
-            this.logger.log('Caching the new section...');
+            // this.logger.log('Caching the new section...');
 
             // Caching newly created section
-            await this.cacheService.set<AboutDto>(`${sectionKey}:${newAboutSection.aboutId}`, newAboutSection, sectionTtl);
+            // await this.cacheService.set<AboutDto>(`${sectionKey}:${newAboutSection.aboutId}`, newAboutSection, sectionTtl);
     
             this.logger.log('About section cached successfully');
 
