@@ -22,7 +22,7 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
         
         return aboutSections.map(section => section.aboutId);
     }
-    
+
     // Method to retrieve all about sections from the database
     async findById(ids: number[]): Promise<AboutDto[] | null> {
         
@@ -47,14 +47,24 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
         return this.aboutRepository.manager.transaction<AboutDto>(async transactionalEntityManager => {
         
             // Fetch the current first section to determine the new section's position
-            const first = await transactionalEntityManager.findOne(AboutEntity, {
-                order: { sectionPosition: 'ASC' }
+            // Use find instead of findOne because typeorm findOne requires an where clause
+            const [first] = await transactionalEntityManager.find(AboutEntity, {
+                order: { sectionPosition: 'ASC' },
+                take: 1,
             });
 
-            // Calculate the new section position. If there is a first section, place the new one before it. If not, start at position 1.
-            const newPosition = first
-            ? Number(first.sectionPosition) - 1
-            : 1;
+            let newPosition: number;
+            
+            // If there is no first section, this is the first entry
+            if (!first) {
+                
+                newPosition = 1;
+
+            // If there is a first section, place the new one before it using the new fractional positioning strategy
+            } else {
+
+                newPosition = Number(first.sectionPosition) / 2;
+            }
 
             // Save new section with the calculated position
             const newAboutSection = await transactionalEntityManager.save(AboutEntity,
@@ -149,12 +159,14 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
                 if (!after) return null;
 
                 // Put the moved section BEFORE it
-                newPosition = Number(after.sectionPosition) - 1;
+                newPosition = Number(after.sectionPosition) / 2;
 
             }
 
             // If moving to the BOTTOM
             else {
+
+                console.log("rhis")
 
                 // Fetch the section that will come before the moved one
                 const before = await transactionalEntityManager.findOne(AboutEntity, {
@@ -165,7 +177,10 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
                 if (!before) return null;
 
                 // Put the moved section AFTER it
-                newPosition = Number(before.sectionPosition) + 1;
+                newPosition = Number(before.sectionPosition) * 2;
+
+                console.log(before.sectionPosition)
+                console.log(newPosition)
             }
 
             // Finally, set the section's position to the new position
