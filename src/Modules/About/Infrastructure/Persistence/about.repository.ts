@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DeleteResult, In, Repository, UpdateResult } from "typeorm";
+import { DeleteResult, EntityManager, In, Repository, UpdateResult } from "typeorm";
 import { plainToInstance } from "class-transformer";
 import { AboutRepositoryInterface } from "src/Modules/About/Domain/Repositories/about.repository.interface";
 import { AboutEntity } from "../../Domain/Entities/about.entity";
@@ -22,15 +22,7 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
         
         return aboutSections.map(section => section.aboutId);
     }
-
-    // Method to retrieve all currently used section positions from the database
-    // async findAllSectionPositions(): Promise<number[]> {
-
-    //     const sectionsPositions = await this.aboutRepository.find({ select: ['sectionPosition'] });
-
-    //     return sectionsPositions.map(section => section.sectionPosition);
-    // }
-
+    
     // Method to retrieve all about sections from the database
     async findById(ids: number[]): Promise<AboutDto[] | null> {
         
@@ -52,38 +44,28 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
     async create(createAboutSectionDto: CreateAboutSectionDto): Promise<AboutDto> {
 
         // Using a transaction to calculate and set the correct section position atomically
-        const newAboutSectionDto = await this.aboutRepository.manager.transaction<AboutDto>(async transactionalEntityManager => {
+        return this.aboutRepository.manager.transaction<AboutDto>(async transactionalEntityManager => {
         
-            // setting the new section's position to the end of the list
-            // const { maxPosition } = await transactionalEntityManager
-            // .createQueryBuilder()                                          // Using QueryBuilder to perform a raw SQL query
-            // .select('COALESCE(MAX(t.section_position), 0)', 'maxPosition') // COALESCE returns the first non-null value, ensuring maxPosition is 0 if no sections exist
-            // .from(AboutEntity, 't')                                        // 't' is an alias for the AboutEntity table
-            // .getRawOne();                                                  // Execute the query and get the raw result
+            // Fetch the current first section to determine the new section's position
+            const first = await transactionalEntityManager.findOne(AboutEntity, {
+                order: { sectionPosition: 'ASC' }
+            });
 
-            // const newAboutSection = await transactionalEntityManager.save({
-            //     ...createAboutSectionDto,
-            //     sectionPosition: Number(maxPosition) + 1,                  // Set the new section's position to one more than the current maximum
-            // });
+            // Calculate the new section position. If there is a first section, place the new one before it. If not, start at position 1.
+            const newPosition = first
+            ? Number(first.sectionPosition) - 1
+            : 1;
 
-            // return plainToInstance(AboutDto, newAboutSection);
-
-
-
-            // setting the new section's position to the start of the list and increment +1 to all others positions
-
-            // Increment positions of all existing sections to make space at position 1
-            await transactionalEntityManager.query(
-                `UPDATE about SET section_position = section_position + 1`
+            // Save new section with the calculated position
+            const newAboutSection = await transactionalEntityManager.save(AboutEntity,
+                {
+                    ...createAboutSectionDto,
+                    sectionPosition: newPosition
+                }
             );
-
-            // Now save the new section at position 1 (aka default position in db)
-            const newAboutSection = await transactionalEntityManager.save(AboutEntity, createAboutSectionDto);
 
             return plainToInstance(AboutDto, newAboutSection);
         });
-
-        return newAboutSectionDto;
     }
 
     // Method to update an existing about section by its ID
@@ -102,53 +84,97 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
         return plainToInstance(AboutDto, updated);
     }
 
-    // Method to update the section position of an about section by its ID
-    async updateSectionPosition(aboutId: number, newPosition: number): Promise<AboutDto | null> {
+    // Method to update the section position of an about section using neighbor id's (fractional/gap ordering)
+    // Honestly, this whole function + amount of space is overkill for just updating position of about sections, which will not have that many entries. But it's a good exercise and a reusable pattern for other similar use-cases, specially because of scalability
+    async updateSectionPosition(
+        aboutId: number,
+        beforeId: number | null,         // ID of the section BEFORE it (can be null)
+        afterId: number | null           // ID of the section AFTER it (can be null)
+    ): Promise<AboutDto | null> {
 
-        // Using a transaction to safely and correctly update section positions
-        const updatedSectionWithNewPositionDto = await this.aboutRepository.manager.transaction(async transactionalEntityManager => {
+        return this.aboutRepository.manager.transaction(async transactionalEntityManager => {
 
-            // Checks if entity exists and replaces it
-            const preload = await transactionalEntityManager.preload(
-                AboutEntity,
-                { aboutId }
-            );
+            // Fetch the section that is being moved
+            // Do not use preload here because, on a normal update where we send a DTO, we want to replace all fields. Here we only want to change the position
+            const moving = await transactionalEntityManager.findOne(
+                AboutEntity, {
+                where: { aboutId }
+            });
 
-            if (!preload) return null;                  // entity not found
+            // If it doesn't exist, abort
+            if (!moving) return null;
 
-            const from = preload.sectionPosition;       // Current position
-            const to = newPosition;                     // New desired position
+            // If there are no neighbors specified, abort
+            if (beforeId === null && afterId === null) return null;
 
-            if (from === to) return null;               // No change needed if positions are the same
+            let newPosition: number;
 
-            if (from > to) {
+            // If both beforeId and afterId are provided (aka, moving somewhere in the middle)
+            if (beforeId && afterId) {
 
-                // If current position is greater than new position (aka, moving up), increment positions in the range [from, to])
-                await transactionalEntityManager.query(
-                    `UPDATE about SET section_position = section_position + 1
-                    WHERE section_position < ? AND section_position >= ?`,
-                    [from, to]
-                );
-            } else {
+                // Fetch both neighbor sections in parallel
+                let [before, after] = await Promise.all([
+                    transactionalEntityManager.findOne(AboutEntity, { where: { aboutId: beforeId } }),
+                    transactionalEntityManager.findOne(AboutEntity, { where: { aboutId: afterId } }),
+                ]);
 
-                // If current position is less than new position (aka, moving down), decrement positions in the range [from, to])
-                await transactionalEntityManager.query(
-                    `UPDATE about SET section_position = section_position - 1
-                    WHERE section_position > ? AND section_position <= ?`,
-                    [from, to]
-                );
+                // If either neighbor doesn't exist, abort
+                if (!before || !after) return null;
+
+                // If the gap is too small, rebalance all positions
+                if (after.sectionPosition - before.sectionPosition < 0.0000000001) {
+                    
+                    await this.rebalanceAllPositions(transactionalEntityManager);
+
+                    // Re-fetch neighbors after rebalance
+                    [before, after] = await Promise.all([
+                        transactionalEntityManager.findOne(AboutEntity, { where: { aboutId: beforeId } }),
+                        transactionalEntityManager.findOne(AboutEntity, { where: { aboutId: afterId } }),
+                    ]);
+                }
+
+                // Place the moved section between them
+                newPosition = (Number(before.sectionPosition) + Number(after.sectionPosition)) / 2;
+            }
+
+            // If moving to the TOP
+            else if (!beforeId && afterId) {
+
+                // Fetch the section that will come after the moved one
+                const after = await transactionalEntityManager.findOne(AboutEntity, {
+                    where: { aboutId: afterId }
+                });
+
+                // If the neighbor doesn't exist, abort
+                if (!after) return null;
+
+                // Put the moved section BEFORE it
+                newPosition = Number(after.sectionPosition) - 1;
+
+            }
+
+            // If moving to the BOTTOM
+            else {
+
+                // Fetch the section that will come before the moved one
+                const before = await transactionalEntityManager.findOne(AboutEntity, {
+                    where: { aboutId: beforeId }
+                });
+
+                // If the neighbor doesn't exist, abort
+                if (!before) return null;
+
+                // Put the moved section AFTER it
+                newPosition = Number(before.sectionPosition) + 1;
             }
 
             // Finally, set the section's position to the new position
-            const updatedSection = await transactionalEntityManager.save({
-                ...preload,
-                sectionPosition: to,
-            });
+            moving.sectionPosition = newPosition;
+
+            const updatedSection = await transactionalEntityManager.save(moving);
 
             return plainToInstance(AboutDto, updatedSection);
         });
-
-        return updatedSectionWithNewPositionDto;
     }
 
     // Method to remove an about section by its ID
@@ -179,5 +205,24 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
         });
 
         return deleteResult!; // ! = non-null assertion because we know it exists
+    }
+
+    // Helper method to rebalance all positions to consecutive integers (1,2,3,...)
+    private async rebalanceAllPositions(transactionalEntityManager: EntityManager): Promise<void> {
+
+        // Using MySQL user-defined variable to assign consecutive integers based on current ordering
+        // The syntax is as follows:
+        // @i means a user-defined variable in MySQL
+        // := is the assignment operator
+        await transactionalEntityManager.query(
+            `SET @i := 0;`
+        );
+
+        // The variable @i is initialized to 0, and for each row in the ordered result set, it increments @i by 1 and assigns that value to section_position
+        await transactionalEntityManager.query(
+            `UPDATE about
+            SET section_position = (@i := @i + 1)
+            ORDER BY section_position;`
+        );
     }
 }

@@ -58,10 +58,10 @@ export class AboutController {
 
   // Endpoint to update the position of an about section by its ID
   @Put('position/:aboutId')
-  updatePosition(@Param('aboutId') aboutId: string, @Body() newPosition: number) {
+  updatePosition(@Param('aboutId') aboutId: string, @Body() body: { beforeId: string | null, afterId: string | null }) {
 
     // + operator to convert string to number
-    return this.updateAboutSectionPositionUseCase.execute(+aboutId, newPosition);
+    return this.updateAboutSectionPositionUseCase.execute(+aboutId, +body.beforeId, +body.afterId);
   }
 
   // Endpoint to delete an about section by its ID

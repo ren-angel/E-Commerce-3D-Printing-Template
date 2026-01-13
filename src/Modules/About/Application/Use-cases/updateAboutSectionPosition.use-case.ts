@@ -17,7 +17,7 @@ export class UpdateAboutSectionPositionUseCase {
     ) {}
 
     // Method to execute the use case, taking the section ID and a it's new position as input, deleting the outdated section and caching the updated one
-    async execute(aboutId: number, newPosition: number): Promise<boolean> {
+    async execute(aboutId: number, beforeId: number | null, afterId: number | null): Promise<boolean> {
 
         const listKey = 'about-sections:list';
         const sectionKey = 'about-section';
@@ -29,15 +29,20 @@ export class UpdateAboutSectionPositionUseCase {
                 throw new InvalidEntityError('ID da seção é obrigatório para atualização de posição.');
             }
 
-            if (newPosition === undefined || newPosition === null || isNaN(newPosition) || newPosition < 0) {
+            if (beforeId === undefined || beforeId === null || isNaN(beforeId) || beforeId < 0) {
 
-                throw new InvalidEntityError('Nova posição da seção é obrigatória e deve ser um número válido maior ou igual a zero.');
+                throw new InvalidEntityError('ID da seção anterior é obrigatório e deve ser um número válido maior ou igual a zero.');
+            }
+
+            if (afterId === undefined || afterId === null || isNaN(afterId) || afterId < 0) {
+
+                throw new InvalidEntityError('ID da seção posterior é obrigatório e deve ser um número válido maior ou igual a zero.');
             }
             
             this.logger.log('Updating section position...');
 
             // Update the about section in the repository
-            const updatedAboutSectionPosition = await this.aboutRepository.updateSectionPosition(aboutId, newPosition);
+            const updatedAboutSectionPosition = await this.aboutRepository.updateSectionPosition(aboutId, beforeId, afterId);
 
             if (!updatedAboutSectionPosition) {
 
@@ -64,7 +69,7 @@ export class UpdateAboutSectionPositionUseCase {
         } catch (err) {
 
             // Log the error and rethrow a generic error message
-            this.logger.error('Error updating the about section:', err);
+            this.logger.error('Error updating the about section\'s position:', err);
 
             // If it's a known/domain/internal expected error, rethrow
             if (err instanceof DomainError) {
@@ -73,7 +78,7 @@ export class UpdateAboutSectionPositionUseCase {
             }
 
             // Otherwise, it's unexpected -> generic error
-            throw new InfrastructureError('Erro ao atualizar a seção.');
+            throw new InfrastructureError('Erro ao atualizar a posição da seção.');
         }
     }
 }
