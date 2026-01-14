@@ -166,8 +166,6 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
             // If moving to the BOTTOM
             else {
 
-                console.log("rhis")
-
                 // Fetch the section that will come before the moved one
                 const before = await transactionalEntityManager.findOne(AboutEntity, {
                     where: { aboutId: beforeId }
@@ -178,9 +176,6 @@ export class TypeOrmAboutRepository implements AboutRepositoryInterface {
 
                 // Put the moved section AFTER it
                 newPosition = Number(before.sectionPosition) * 2;
-
-                console.log(before.sectionPosition)
-                console.log(newPosition)
             }
 
             // Finally, set the section's position to the new position

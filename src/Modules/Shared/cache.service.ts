@@ -80,7 +80,7 @@ export class CacheService {
 
         if (!key) return undefined;
 
-        return this.cache.get<T>(key);
+        return await this.cache.get<T>(key);
     }
 
     // Method to retrieve multiple values from the cache by their key, returning a Promise that resolves to the value of type T or undefined if the key does not exist
@@ -88,7 +88,7 @@ export class CacheService {
 
         if (keys.length === 0) return [];
 
-        return this.cache.mget<T>(keys);
+        return await this.cache.mget<T>(keys);
     }
 
     // Method to retrieve a list from cache by it's key, starting from the beginning (0) to the last element (-1), returning a Promise that resolves to string[] as lrange always returns a string
@@ -195,6 +195,14 @@ export class CacheService {
             : JSON.stringify(value);
 
         await this.redis.lrem(listKey, count, serialized);
+    }
+
+    // Method to remove a list in its entirety from the cache by its key, returning a Promise that resolves when the list is deleted
+    async ldel(listKey: string): Promise<void> {
+
+        if (!listKey) return;
+        
+        await this.redis.del(listKey);
     }
 
     // Method to clear all entries in the cache, returning a Promise that resolves when the cache is reset

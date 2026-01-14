@@ -24,18 +24,19 @@ export class FindAllAboutSectionsUseCase {
 
         try {
 
-            // this.logger.log('Fetching all about sections IDs from cache...');
+            this.logger.log('Fetching all about sections IDs from cache...');
         
             // Getting the cached IDs
             const rawAboutSectionsIds = await this.cacheService.lrange(listKey); // returns strings
             let aboutSectionsIds = rawAboutSectionsIds.map(id => Number(id)); // convert to numbers
 
-            console.log("aboutSectionsIds ", aboutSectionsIds);
+            // Validate if there are duplicate IDs in the cached list. Set is a collection of unique values, so if sizes differ, there are duplicates
+            const hasDuplicates = new Set(aboutSectionsIds).size !== aboutSectionsIds.length;
 
-            // if couldn't find any cached IDs, then fetch IDs from the repository and cache them
-            if (!aboutSectionsIds || aboutSectionsIds.length === 0) {
+            // if couldn't find any cached IDs or there are duplicate IDs on the list, then fetch IDs from the repository and create/recreate list
+            if (!aboutSectionsIds || aboutSectionsIds.length === 0 || hasDuplicates) {
 
-                // this.logger.log('About sections IDs not found in cache. Fetching from repository...');
+                this.logger.log('Sections IDs not found/duplicates in cache. Fetching from repository...');
 
                 // First, acquire a lock to prevent cache stampede
                 aboutSectionsIds = await this.cacheService.withLock(
@@ -46,19 +47,22 @@ export class FindAllAboutSectionsUseCase {
 
                         if (ids.length > 0) {
 
-                            // this.logger.log('Sections IDs fetched successfully. Caching the result...');
+                            this.logger.log('Sections IDs fetched successfully. Caching the result...');
 
                             // Rebuilds the cache list with the fetched IDs
-                            await this.cacheService.del(listKey)
-                            await this.cacheService.rpush<number[]>(listKey, ids, sectionTtl);
+                            await this.cacheService.ldel(listKey)
+                            
+                            // Push each ID to the list in cache, as to not store the entire array as a single entry
+                            for (const id of ids) {
 
-                            console.log("ids ", ids);
+                                await this.cacheService.rpush(listKey, id.toString(), sectionTtl);
+                            }
 
-                            // this.logger.log('Sections IDs cached successfully.');
+                            this.logger.log('Sections IDs cached successfully.');
                         } else {
 
                             // If no IDs are found, return null
-                            // this.logger.log('No about sections found in repository.');
+                            this.logger.log('No about sections found in repository.');
                             return null;
                         }
 
@@ -67,7 +71,7 @@ export class FindAllAboutSectionsUseCase {
                 );
             }
 
-            // this.logger.log('Fetching all about sections from cache...');
+            this.logger.log('Fetching all about sections from cache...');
 
             // Creating keys for each section based on their IDs
             const keys = aboutSectionsIds.map(id => `${sectionKey}:${id}`);
@@ -75,69 +79,36 @@ export class FindAllAboutSectionsUseCase {
             // Attempt to fetch all sections from cache using mget for efficiency
             const cachedArr = await this.cacheService.mget<AboutDto | null>(keys);
 
-            console.log("cachedArr ", cachedArr);
+            // Since in create sections we only push the ID to the list, but remove every section from cache for being stale info because of positioning, meanwhile normal updates that doesn't affect positioning are cached right after said update, the cache will always be either empty or complete, so if there's any null, we can assume the cache is incomplete and fetch all from repository
+            if (cachedArr.every(item => item !== null && item !== undefined)) {
 
-            // Check if all sections were found in cache by filtering out any null values
-            const missesIndexes = [];
-            for (let i = 0; i < cachedArr.length; i++) {
-
-                if (cachedArr[i] == null) missesIndexes.push(i);
-            }
-
-            console.log("missesIndexes ", missesIndexes);
-
-            // If all sections are found in cache, return them as an array of AboutDto
-            if (missesIndexes.length === 0) {
-                
-                // this.logger.log('About sections fetched from cache successfully.');
+                this.logger.log('About sections fetched from cache successfully.');
 
                 return cachedArr as AboutDto[];
             }
 
-            // this.logger.log('Cache miss (partial/full). Fetching missing about sections from repository...');
+            // If no sections are found in cache, fetch all from repository
+            this.logger.log('No sections found in cache. Fetching from repository...');
 
-            // Fetch all the missing about sections from the repository and cache each section individually
-            // Translates the missing indexes into the corresponding IDs from aboutSectionsIds
-            const missedIds = missesIndexes.map(i => aboutSectionsIds[i]);
-            
-            // Fetching missing sections from the repository
-            // No lock here to avoid deadlocks, as the outer lock should be sufficient
-            const missingSections = await this.aboutRepository.findById(missedIds);
+            const aboutSections = await this.aboutRepository.findById(aboutSectionsIds);
 
-            console.log("missingSections ", missingSections);
+            // If no sections are found in repository, return null
+            if (!aboutSections || aboutSections.length === 0) return null
 
-            // If no sections are found, return null
-            if (!missingSections || missingSections.length === 0) {
-
-                // this.logger.log('No about sections found in repository.');
-                return null;
-            }
-
-            // this.logger.log('About sections fetched successfully. Caching the result...');
+            this.logger.log('About sections fetched successfully. Caching the result...');
 
             // Creating the payload for setting multiple values in the cache, mapping through each section
-            const msetPayload = missingSections.map(section => ({
+            const msetPayload = aboutSections.map(section => ({
                 key: `${sectionKey}:${section.aboutId}`,
                 value: section,
             }));
 
             // Caching the missing sections in bulk
             await this.cacheService.mset<AboutDto>(msetPayload, sectionTtl);
-        
-            // Combine cached sections and newly fetched sections, ensuring the order matches the original IDs
-            // Create a map (object that holds key-value pairs and remembers the original insertion order of the keys) for quick lookup of missing sections by their ID
-            const missingMap = new Map(missingSections.map(s => [s.aboutId, s]));
 
-            // Map over the original IDs and construct the final result array by pulling from the cached array or the missing sections map
-            const result: AboutDto[] = aboutSectionsIds.map((id, index) => {
-                return cachedArr[index] ?? missingMap.get(id.toString())!; // ! = non-null assertion because we know it exists
-            });
+            this.logger.log('About sections cached successfully.');
 
-            console.log("result ", result)
-
-            // this.logger.log('About sections cached successfully.');
-
-            return result;
+            return aboutSections;
 
             // If mapping for adjusting the order is necessary:
             // const mapById = new Map<number, AboutDto>();
