@@ -59,7 +59,6 @@ describe('CreateAboutSectionUseCase (unit)', () => {
     // Input DTO for creating an about section
     const dto = new CreateAboutSectionDto();
     dto.section = 'X';
-    dto.sectionPosition = 1;
     dto.contentText = 'Content';
 
     // Mocked created object returned by the repository
@@ -106,7 +105,6 @@ describe('CreateAboutSectionUseCase (unit)', () => {
     // Input DTO for creating an about section
     const dto = new CreateAboutSectionDto();
     dto.section = 'X';
-    dto.sectionPosition = 1;
     dto.contentText = 'Content';
     
     // Makes repository return null to simulate no section being created
@@ -133,7 +131,6 @@ describe('CreateAboutSectionUseCase (unit)', () => {
     // DTO with invalid data to trigger validation errors
     const dto = new CreateAboutSectionDto();
     dto.section = '';
-    dto.sectionPosition = 0;
     dto.contentText = '';
 
     // Expects the use-case execution to throw a DomainError due to validation failure
@@ -166,7 +163,6 @@ describe('CreateAboutSectionUseCase (unit)', () => {
     // Input DTO for creating an about section
     const dto = new CreateAboutSectionDto();
     dto.section = 'X';
-    dto.sectionPosition = 1;
     dto.contentText = 'Content';
 
     // Makes repository.create throw a DomainError when called
@@ -188,7 +184,6 @@ describe('CreateAboutSectionUseCase (unit)', () => {
     // Input DTO for creating an about section
     const dto = new CreateAboutSectionDto();
     dto.section = 'X';
-    dto.sectionPosition = 1;
     dto.contentText = 'Content';
 
     // Makes repository.create throw an error when called

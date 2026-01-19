@@ -59,7 +59,6 @@ describe('UpdateAboutSectionUseCase (unit)', () => {
     // Input DTO for updating an about section
     const dto = new UpdateAboutSectionDto();
     dto.section = 'Y';
-    dto.sectionPosition = 2;
     dto.contentText = 'Updated Content';
 
     // Mocked updated object returned by the repository
@@ -114,7 +113,6 @@ describe('UpdateAboutSectionUseCase (unit)', () => {
     // Input DTO for updating an about section
     const dto = new UpdateAboutSectionDto();
     dto.section = 'A';
-    dto.sectionPosition = 1;
     dto.contentText = 'Content';
 
     // Mock the repository to return null, simulating no section updated
@@ -143,7 +141,6 @@ describe('UpdateAboutSectionUseCase (unit)', () => {
     // DTO with invalid data to trigger validation errors
     const dto = new UpdateAboutSectionDto();
     dto.section = '';
-    dto.sectionPosition = 0;
     dto.contentText = '';
 
     // Expects the use-case execution to throw a DomainError due to validation failure
@@ -166,7 +163,6 @@ describe('UpdateAboutSectionUseCase (unit)', () => {
     // Input DTO for updating an about section
     const dto = new UpdateAboutSectionDto();
     dto.section = 'X';
-    dto.sectionPosition = 1;
     dto.contentText = 'Content';
 
     // Makes repository.update throw a DomainError when called
@@ -188,7 +184,6 @@ describe('UpdateAboutSectionUseCase (unit)', () => {
     // Input DTO for updating an about section
     const dto = new UpdateAboutSectionDto();
     dto.section = 'X';
-    dto.sectionPosition = 1;
     dto.contentText = 'Content';
 
     // Makes repository.update throw an error when called
