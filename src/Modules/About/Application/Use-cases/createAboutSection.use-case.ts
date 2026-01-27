@@ -87,7 +87,7 @@ export class CreateAboutSectionUseCase {
             this.logger.error('Error creating the about section:', err);
 
             // If it's a known/domain/internal expected error, rethrow
-            if (err instanceof DomainError) {
+            if (err instanceof DomainError || (err && (err as any).isDomainError)) {
 
                 throw err;
             }

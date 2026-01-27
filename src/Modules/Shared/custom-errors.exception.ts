@@ -1,6 +1,8 @@
 // Custom error class for domain-specific errors. Domain errors are errors that occur due to business logic violations or invalid operations within the application's domain.
 export class DomainError extends Error {
 
+    public readonly isDomainError = true; // Flag to identify domain errors. This is necessary because instanceof checks may fail across module boundaries.
+
     // Constructor to initialize the DomainError with a specific message
     constructor(message: string) {
         super(message); // Call the parent class (Error) constructor with the message

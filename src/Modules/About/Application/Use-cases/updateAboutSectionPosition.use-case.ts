@@ -72,7 +72,7 @@ export class UpdateAboutSectionPositionUseCase {
             this.logger.error('Error updating the about section\'s position:', err);
 
             // If it's a known/domain/internal expected error, rethrow
-            if (err instanceof DomainError) {
+            if (err instanceof DomainError || (err && (err as any).isDomainError)) {
 
                 throw err;
             }

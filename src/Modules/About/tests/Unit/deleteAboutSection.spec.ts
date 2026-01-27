@@ -69,33 +69,15 @@ describe('DeleteAboutSectionUseCase', () => {
         expect(mockCache.lrem).toHaveBeenCalledWith(listKey, 0, 1)
     });
 
-    // Test case: deletion fails due to invalid ID
-    it('throws the expected message when aboutId is falsy (0, null, undefined)', async () => {
-
-        // Execute the use-case with an invalid ID and expect it to throw an InvalidEntityError
-        await expect(usecase.execute(0)).rejects.toEqual('ID da seção é obrigatório para remoção.');
-
-        // Asserts that the logger logged the error
-        expect(mockLogger.error).toHaveBeenCalled();
-
-        // Asserts that the repository's remove method was not called
-        expect(mockRepo.remove).not.toHaveBeenCalled();
-        expect(mockCache.del).not.toHaveBeenCalled();
-        expect(mockCache.lrem).not.toHaveBeenCalled();
-    });
-
     // Test case: repository throws a DomainError
     it('rethrows domain error message (string) when repository throws a DomainError', async () => {
 
         // Makes repository.create throw a DomainError when called
         mockRepo.remove.mockRejectedValue(new DomainError('Invalid'));
 
-        // Expects the use-case execution to throw the same error message
-        await expect(usecase.execute(3)).rejects.toEqual('Invalid');
-
         // Expects the use-case execution to rethrow the DomainError
         await expect(usecase.execute(3)).rejects.toBeInstanceOf(DomainError);
-
+        
         // Asserts that the logger logged the error
         expect(mockLogger.error).toHaveBeenCalled();
     });
@@ -106,9 +88,6 @@ describe('DeleteAboutSectionUseCase', () => {
         // Makes repository.create throw a EntityNotFoundError when called
         mockRepo.remove.mockRejectedValue(new EntityNotFoundError('Nenhuma seção foi removida.'));
 
-        // Expects the use-case execution to throw the same error message
-        await expect(usecase.execute(3)).rejects.toEqual('Nenhuma seção foi removida.');
-
         // Expects the use-case execution to rethrow the EntityNotFoundError
         await expect(usecase.execute(3)).rejects.toBeInstanceOf(EntityNotFoundError);
 
@@ -116,20 +95,19 @@ describe('DeleteAboutSectionUseCase', () => {
         expect(mockLogger.error).toHaveBeenCalled();
     });
 
-    // Test case: repository throws a InvalidEntityError
+    // Test case: repository throws a InvalidEntityError, which occurs when the input entity is invalid
     it('rethrows invalid entity error message (string) when repository throws a InvalidEntityError', async () => {
 
-        // Makes repository.create throw a InvalidEntityError when called
-        mockRepo.remove.mockRejectedValue(new InvalidEntityError('ID da seção é obrigatório para remoção.'));
-
-        // Expects the use-case execution to throw the same error message
-        await expect(usecase.execute(3)).rejects.toEqual('ID da seção é obrigatório para remoção.');
-
         // Expects the use-case execution to rethrow the InvalidEntityError
-        await expect(usecase.execute(3)).rejects.toBeInstanceOf(InvalidEntityError);
+        await expect(usecase.execute(0)).rejects.toBeInstanceOf(InvalidEntityError);
 
         // Asserts that the logger logged the error
         expect(mockLogger.error).toHaveBeenCalled();
+
+        // Asserts that the repository's remove method was not called
+        expect(mockRepo.remove).not.toHaveBeenCalled();
+        expect(mockCache.del).not.toHaveBeenCalled();
+        expect(mockCache.lrem).not.toHaveBeenCalled();
     });
 
     // Test case: repository throws an unexpected error

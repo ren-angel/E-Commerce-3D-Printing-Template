@@ -59,9 +59,9 @@ export class DeleteAboutSectionUseCase {
             this.logger.error('Error deleting the about section:', err.message);
 
             // If it's a known/domain/internal expected error, rethrow
-            if (err instanceof DomainError) {
+            if (err instanceof DomainError || (err && (err as any).isDomainError)) {
 
-                throw err.message;
+                throw err;
             }
 
             // Otherwise, it's unexpected -> generic error
