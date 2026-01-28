@@ -18,6 +18,9 @@ describe('CreateAboutSectionUseCase (unit)', () => {
   let mockCache: any;
   let mockLogger: any;
 
+  const listKey = 'about-sections:list';
+  const sectionTtl = (60000 * 60) * 24;
+
   // Runs before each test to reset mocks and create fresh instances
   beforeEach(() => {
 
@@ -28,7 +31,8 @@ describe('CreateAboutSectionUseCase (unit)', () => {
 
     mockCache = {
       rpush: jest.fn(),
-      set: jest.fn(),
+      lrange: jest.fn(),
+      mdel: jest.fn(),
     };
 
     mockLogger = {
@@ -72,6 +76,11 @@ describe('CreateAboutSectionUseCase (unit)', () => {
     // Makes repository return the created object when called. mockResolvedValue simulates an async function returning a resolved promise
     mockRepo.create.mockResolvedValue(created);
 
+    // Mocks cache methods to return expected values
+    mockCache.lrange.mockResolvedValue([]);
+    mockCache.mdel.mockResolvedValue(null);
+    mockCache.rpush.mockResolvedValue(null);
+
     // Executes the use-case with the DTO
     const result = await usecase.execute(dto);
 
@@ -83,16 +92,9 @@ describe('CreateAboutSectionUseCase (unit)', () => {
 
     // Checks if cache methods were called with correct parameters
     expect(mockCache.rpush).toHaveBeenCalledWith(
-      'about-sections:list',
+      listKey,
       created.aboutId,
-      (60000 * 60) * 24,
-    );
-
-    // Checks if the new section was cached correctly
-    expect(mockCache.set).toHaveBeenCalledWith(
-      `about-section:${created.aboutId}`,
-      created,
-      (60000 * 60) * 24,
+      sectionTtl,
     );
 
     // Asserts that the result from the use-case matches the created object
@@ -140,7 +142,6 @@ describe('CreateAboutSectionUseCase (unit)', () => {
     expect(classValidate).toHaveBeenCalledWith(dto, { stopAtFirstError: true });
 
     expect(mockRepo.create).not.toHaveBeenCalled(); // Ensures repository.create was not called due to validation failure
-    expect(mockCache.set).not.toHaveBeenCalled();   // Ensures cache.set was not called due to validation failure
     expect(mockLogger.error).toHaveBeenCalled();    // Asserts that the logger logged the error
   });
 

@@ -22,6 +22,7 @@ describe('DeleteAboutSectionUseCase', () => {
     // Runs before each test to reset mocks and create fresh instances
     beforeEach(() => {
 
+        // Mock implementation of each dependency using Jest
         mockRepo = {
             remove: jest.fn(),
         };
@@ -36,8 +37,7 @@ describe('DeleteAboutSectionUseCase', () => {
             error: jest.fn(),
         };
 
-        // Construct the use case using the mocks.
-        // The constructor expects: @Inject('AboutRepositoryInterface') aboutRepository, cacheService, logger
+        // Create a new instance of the use-case with mocked dependencies
         usecase = new DeleteAboutSectionUseCase(
             mockRepo,
             mockCache,

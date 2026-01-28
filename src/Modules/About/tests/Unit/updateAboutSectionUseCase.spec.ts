@@ -18,6 +18,9 @@ describe('UpdateAboutSectionUseCase (unit)', () => {
   let mockCache: any;
   let mockLogger: any;
 
+  const sectionKey = 'about-section';
+  const sectionTtl = (60000 * 60) * 24;
+
   // Runs before each test to reset mocks and create fresh instances
   beforeEach(() => {
 
@@ -82,13 +85,13 @@ describe('UpdateAboutSectionUseCase (unit)', () => {
     expect(mockRepo.update).toHaveBeenCalledWith(1, dto);
 
     // Checks if cache delete method was called with correct parameters
-    expect(mockCache.del).toHaveBeenCalledWith('about-section:1');
+    expect(mockCache.del).toHaveBeenCalledWith(`${sectionKey}:1`);
 
     // Checks if the updated section was cached correctly
     expect(mockCache.set).toHaveBeenCalledWith(
-      'about-section:1',
+      `${sectionKey}:1`,
       updated,
-      (60000 * 60) * 24,
+      sectionTtl,
     );
 
     // Asserts that the result from the use-case matches the updated object
