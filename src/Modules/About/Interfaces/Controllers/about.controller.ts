@@ -9,6 +9,10 @@ import { UpdateAboutSectionUseCase } from '../../Application/Use-cases/updateAbo
 import { UpdateAboutSectionPositionUseCase } from '../../Application/Use-cases/updateAboutSectionPosition.use-case';
 import { DeleteAboutSectionUseCase } from '../../Application/Use-cases/deleteAboutSection.use-case';
 import { seconds, Throttle } from '@nestjs/throttler';
+import { JwtAuthGuard } from 'src/Modules/Shared/jwt.guard';
+
+// Applying the JwtAuthGuard to the entire controller to protect all endpoints with JWT authentication
+@UseGuards(JwtAuthGuard)
 
 // Controller for managing about sections, handling HTTP requests and delegating to use cases
 @Controller('about')
