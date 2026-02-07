@@ -1,7 +1,7 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import { CacheService } from "src/Modules/Shared/cache.service";
 import { AboutRepositoryInterface } from "../../Domain/Repositories/about.repository.interface";
 import { AboutDto } from "../DTO/about.dto";
+import { CacheService } from "src/Modules/Shared/cache.service";
 import { InfrastructureError } from "src/Modules/Shared/custom-errors.exception";
 
 @Injectable()

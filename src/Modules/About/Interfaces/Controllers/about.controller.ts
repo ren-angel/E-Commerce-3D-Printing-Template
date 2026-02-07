@@ -17,7 +17,6 @@ import { JwtAuthGuard } from 'src/Modules/Shared/jwt.guard';
 // Controller for managing about sections, handling HTTP requests and delegating to use cases
 @Controller('about')
 @Throttle({ default: { limit: 30, ttl: seconds(60) } }) // Overriding the default throttling for this specific controller 
-// @UseGuards(JwtAuthGuard)
 export class AboutController {
 
   // Injecting the necessary use cases for handling about section operations

@@ -13,7 +13,9 @@ import { UpdateAboutSectionDto } from "src/Modules/About/Interfaces/DTOs/update-
 export class TypeOrmAboutRepository implements AboutRepositoryInterface {
 
     // Injecting the TypeORM repository for the AboutEntity, with the private access modifier to create and initialize the aboutRepository property, and readonly to prevent reassignment after initialization
-    constructor(@InjectRepository(AboutEntity) private readonly aboutRepository: Repository<AboutEntity>) {}
+    constructor(
+        @InjectRepository(AboutEntity) private readonly aboutRepository: Repository<AboutEntity>,
+    ) {}
     
     // Method to retrieve all about section IDs from the database
     async findAllIds(): Promise<number[]> {

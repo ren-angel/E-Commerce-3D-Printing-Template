@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 // import { AuthModule } from 'src/infrastructure/http/modules/auth.module';
 import { AboutController } from './Interfaces/Controllers/about.controller';
 import { AboutEntity } from './Domain/Entities/about.entity';
+import { AdminModule } from '../Admin/admin.module';
 import { FindAllAboutSectionsUseCase } from './Application/Use-cases/findAllAboutSections.use-case';
 import { FindOneAboutSectionsUseCase } from './Application/Use-cases/findOneAboutSections.use-case';
 import { CreateAboutSectionUseCase } from './Application/Use-cases/createAboutSection.use-case';
@@ -15,7 +16,7 @@ import { TypeOrmAboutRepository } from './Infrastructure/Persistence/about.repos
 // Module definition for the About section of the application
 @Module({
 //   imports: [TypeOrmModule.forFeature([AboutEntity]), AuthModule],
-  imports: [TypeOrmModule.forFeature([AboutEntity])], // Importing TypeOrmModule with AboutEntity for database operations
+  imports: [TypeOrmModule.forFeature([AboutEntity]), AdminModule], // Importing TypeOrmModule with AboutEntity for database operations and AdminModule for authentication and authorization
   providers: [
     {
       provide: 'AboutRepositoryInterface', // Providing the AboutRepositoryInterface with its TypeORM implementation

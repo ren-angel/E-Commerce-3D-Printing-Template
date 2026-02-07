@@ -28,6 +28,7 @@ import { AboutEntity } from './Modules/About/Domain/Entities/about.entity';
         REDIS_PORT: Joi.number().default(16905),
         REDIS_USER: Joi.string().required(),
         REDIS_PASSWORD: Joi.string().required(),
+        SECRET_KEY: Joi.string().required(),
       })
     }),
 
